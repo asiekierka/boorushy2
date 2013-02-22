@@ -1,1 +1,17 @@
-Hi!
+<div class="row padded-row">
+<div class="span12">
+<form method="post" action="/upload/post" enctype="multipart/form-data">
+<fieldset>
+<legend>Upload</legend>
+<input type="hidden" name="uploader" value="<%= username %>">
+<label>Author</label>
+<input type="text" name="author">
+<label>Tags [comma separated]</label>
+<input type="text" name="tags_string">
+<label>Source</label>
+<input type="text" name="source">
+<label>File</label>
+<input type="file" name="image">
+<button type="submit" class="btn">Submit</button>
+</div>
+</div>

@@ -7,7 +7,7 @@ var ImageDB = {}
 var client = null;
 
 ImageDB.connect = function(port,host,options) {
-  client = redis.createClient(port || null,host || null,options || {});
+  client = redis.createClient(port || null, host || null, options || {});
 }
 
 ImageDB.get = function(id,callback) {
@@ -30,11 +30,12 @@ ImageDB.addField = function(id,key,val) {
 }
 ImageDB.delField = function(id,key,val) {
   client.srem(key+":"+val,id);
-  client.scard(key+":"+val, function(err,m) {
+  client.scard(key+":"+val, function(err,card) {
     if(err) throw err;
-    if(m>0) return;
-    client.del(key+":"+val);
-    client.srem(key+"s",val);
+    if(card==0) {
+      client.del(key+":"+val);
+      client.srem(key+"s",val);
+    }
   });
 }
 

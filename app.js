@@ -45,16 +45,17 @@ function thumbnail(src,dest,dest2x) {
     resize(src,dest2x,thumbW*2,thumbH*2);
 }
 
-function addImage(rawdata,format,info) {
+function addImage(rawdata,format,info,callback) {
   imageDB.count("imageId",function(err,id) {
     var path = id+"."+format;
     fs.writeFile("img/src/"+path,rawdata,"utf8",function() {
       im.identify("img/src/"+path, function(err,features) {
         if(err) throw err;
-        var data = { id: id, format: format, filename: path, originalName: info.filename,
-                     width: features.width, height: features.height,
-                     tags: info.tags, uploader: info.uploader, author: info.author};
+        var data = { id: id, format: format, filename: path, originalFilename: info.filename,
+                     width: features.width, height: features.height};
+        data = _.defaults(data,info);
         imageDB.set(id,_.defaults(data,defaultImage));
+        if(_.isFunction(callback)) callback();
       });
       thumbnail("img/src/"+path,"img/thumb/"+path,"img/thumb2x/"+path);
     });
@@ -80,15 +81,29 @@ mkdirp.sync("img/thumb");
 mkdirp.sync("img/thumb2x");
 
 // Load directory dependencies
+app.use("/static/",express.compress());
 app.use("/static/",express.static("bootstrap"));
 app.use("/static/",express.static("static"));
 app.use("/img/",express.static("img"));
 app.use("/img/thumb/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
 app.use("/img/thumb2x/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
-app.use("/upload/",express.basicAuth("test","test"));
+app.use("/upload/",express.basicAuth("admin","admin"));
+app.post("/upload/post",express.bodyParser());
+app.post("/upload/post", function(req,res) {
+  if(!req.files || !req.files.image || !req.body.uploader || !req.body.author)
+    { res.send(500); return; }
+  var metadata = req.body;
+  metadata.tags = _.map(req.body.tags_string.split(","), _.trim);
+  var fn = req.files.image.name;
+  var ext = fileExt(fn);
+  fs.readFile(req.files.image.path, function(err, data) {
+    if(err) throw err;
+    addImage(data,ext,req.body,function(){ res.redirect("/"); });
+  });
+});
 app.use("/upload/",function(req,res) {
   var p = qs.unescape(req.path).split("/");
-  res.send(makeTemplate("upload",{title: "Boorushy Upload"},p[1]));
+  res.send(makeTemplate("upload",{username: "admin"},p[1]));
 });
 app.use("/image/",function(req,res) {
   var p = qs.unescape(req.path).split("/");
