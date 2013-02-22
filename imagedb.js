@@ -59,21 +59,6 @@ ImageDB.images = _.partial(ImageDB.listImages,"images");
 ImageDB.imagesBy = function(key,val,callback){
   this.listImages(key+":"+val,callback);
 }
-
-ImageDB.images = function(callback) {
-  client.smembers("images", function(err,m){
-    if(err) throw err;
-    if(_.isNull(m)) callback(new Array());
-    else callback(_.sortBy(m,function(num){ return 0-num; }));
-  });
-}
-ImageDB.imagesBy = function(key,val,callback) {
-  client.smembers(key+":"+val, function(err,m){
-    if(err) throw err;
-    if(_.isNull(m)) callback(new Array());
-    else callback(_.sortBy(m,function(num){ return 0-num; }));
-  });
-}
 ImageDB.range = function(arr2,s,l,callback) {
   var out = new Array();
   var arr = arr2;
