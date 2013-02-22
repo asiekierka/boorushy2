@@ -3,34 +3,35 @@
 <%= imagesLi %>
 </ul>
 <script type="text/javascript">
-// Retinizer!
-function retinize() {
-  if(window.devicePixelRatio>=1.5)
-    $("img.to-retinize").each(function(idx) {
-      var mSrc = $(this).attr("src");
-      if(mSrc.indexOf("thumb2x")<0)
-        $(this).attr("src",mSrc.replace("thumb","thumb2x"));
-      $(this).removeClass("to-retinize");
-    });
+function scriptize() {
+  $("img.to-scriptize").each(function(idx) {
+    var newSrc = $(this).attr("src");
+    if(window.devicePixelRatio>=1.5 && newSrc.indexOf("thumb2x")<0)
+      newSrc = newSrc.replace("thumb","thumb2x");
+    $(this).attr("src",newSrc).removeClass("to-scriptize");
+  });
 }
 function pageLoad() {
-  retinize();
+  scriptize();
   var position = <%= position %>;
   var maxpos = <%= maxpos %>;
   var pageSize = <%= pageSize %>;
-  var dwh = $(document).height() - $(window).height() - 300;
+  var isUpdating = false;
   var update = function() {
-    if(position+pageSize < maxpos && $(window).scrollTop() >= dwh) {
+    if(isUpdating) return;
+    if(position+pageSize < maxpos && $(window).scrollTop() >= ($(document).height() - $(window).height() - 300)) {
+      isUpdating = true;
       position = position + pageSize;
       $.get(position + "/append/",function(data) {
         $("ul.thumbnails").append(data);
-        retinize();
+        scriptize();
         setTimeout(update,50); // In case of huge scrollings
+        isUpdating = false;
       });
     }
   };
   $(window).scroll(update);
-  update();
+  $(document).ready(update);
 }
 function pageUnload() {
   $(window).unbind("scroll");
