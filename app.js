@@ -9,11 +9,15 @@ var express = require('express')
   , path = require('path')
   , qs = require('querystring');
 
+_.str = require('underscore.string');
+_.mixin(_.str.exports());
+
 var app = express()
   , config = require('./config.json')
   , templates = {};
 
-var defaultImage = { author: "Unknown", source: "/", uploader: "Computer" };
+var defaultImage = { author: "Unknown", source: "/", uploader: "Computer"};
+var defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null};
 
 _.each(fs.readdirSync("templates/"),function(filename) {
   var name = filename.split(".")[0];
@@ -58,7 +62,7 @@ function addImage(rawdata,format,info) {
 }
 
 function makeRawTemplate(name,conf,noHeader) {
-  var conf2 = _.defaults(conf,config);
+  var conf2 = _.defaults(conf,config,defaultSiteConfig);
   var body = _.template(templates[name],conf2);
   if(!noHeader)
     body = _.template(templates["header"],conf2) + body;
@@ -66,7 +70,7 @@ function makeRawTemplate(name,conf,noHeader) {
 }
 function makeTemplate(name,conf,raw,noHeader) {
   if(raw=="raw") return makeRawTemplate(name,conf,noHeader);
-  var conf2 = _.defaults(conf,config);
+  var conf2 = _.defaults(conf,config,defaultSiteConfig);
   return _.template(templates["main"],_.defaults(conf2,{page: makeRawTemplate(name,conf,noHeader)}));
 }
 
@@ -90,17 +94,19 @@ app.use("/image/",function(req,res) {
   var p = qs.unescape(req.path).split("/");
   if(!p[1]) res.send(500);
   imageDB.get(p[1],function(data) {
-    res.send(makeTemplate("view",{image: _.defaults(data, defaultImage), title: "Boorushy v.2"},p[2]));
+    res.send(makeTemplate("view",{image: _.defaults(data, defaultImage)},p[2]));
   });
 });
-function listImages(res,images1,p,p2) {
+function listImages(res,images1,p,p2,sub1,sub2) {
   var start = parseInt(p) || 0;
   var isRaw = p2 || false;
   var noHeader = false;
   if(parseInt(p)==NaN) { start = 0; isRaw = p; }
   console.log("listImages: " + start + " " + isRaw);
   imageDB.range(images1,start,config.pageSize,function(images2) {
-    var conf = {images: images2, position: start, maxpos: images1.length, title: "Boorushy v.2"};
+    var conf = {images: images2, position: start, maxpos: images1.length};
+    if(_.isString(sub2))
+      conf.subtitle = _.capitalize(sub1)+": "+sub2;
     var imagesLi = makeRawTemplate("images-li",conf,"raw",true);
     conf.imagesLi = imagesLi;
     if(isRaw == "append") res.send(conf.imagesLi);
@@ -110,7 +116,7 @@ function listImages(res,images1,p,p2) {
 app.use("/",function(req,res) {
   var p = qs.unescape(req.path).split("/");
   console.log("Request: " + JSON.stringify(p)); 
-  if(p.length>2 && (p[1] == "tag" || p[1] == "author" || p[1] == "uploader")) imageDB.imagesBy(p[1],p[2],function(images) { listImages(res,images,p[3],p[4]); });
+  if(p.length>2 && (p[1] == "tag" || p[1] == "author" || p[1] == "uploader")) imageDB.imagesBy(p[1],p[2],function(images) { listImages(res,images,p[3],p[4],p[1],p[2]); });
   else imageDB.images(function(images) { listImages(res,images,p[1],p[2]); });
 });
 

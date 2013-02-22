@@ -11,6 +11,7 @@
     "commander": "1.1.x",
     "redis": "0.8.x",
     "imagemagick": "0.1.x",
-    "async": ">=0.2.5"
+    "async": ">=0.2.5",
+    "underscore.string": "2.x"
   }
 }
