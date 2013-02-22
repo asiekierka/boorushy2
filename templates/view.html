@@ -1,0 +1,28 @@
+<div class="row padded-row">
+<div class="span12" style="text-align: center;">
+<a href="/img/src/<%= image.filename %>">
+<img src="/img/src/<%= image.filename %>" style="max-width: 100%; height: auto;" class="img-polaroid to-resize">
+</a><br><br>
+Tags: <%
+  var t = 0;
+  _.each(image.tags,function(v) {
+    if(t>0) print(', ');
+    print('<a href="/tag/'+v+'/">'+v+'</a>');
+    t+=1;
+  });
+%><br>
+Author: <a href="/author/<%= image.author %>/"><%= image.author %></a> (<a href="<%= image.source %>">Source</a>)<br>
+Uploaded by <a href="/uploader/<%= image.uploader %>/"><%= image.uploader %></a>
+</div>
+<script type="text/javascript">
+function pageLoad() {
+  var winh = $(window).height()*0.8;
+  $("img.to-resize").load(function(){
+    var h = $(this).height();
+    if(h>winh)
+      $(this).attr("style","width: auto; max-height: 80%;");
+  });
+}
+function pageUnload() { }
+</script>
+</div>

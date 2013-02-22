@@ -1,0 +1,40 @@
+<div class="row padded-row">
+<ul class="thumbnails">
+<%= imagesLi %>
+</ul>
+<script type="text/javascript">
+// Retinizer!
+function retinize() {
+  if(window.devicePixelRatio>=1.5)
+    $("img.to-retinize").each(function(idx) {
+      var mSrc = $(this).attr("src");
+      if(mSrc.indexOf("thumb2x")<0)
+        $(this).attr("src",mSrc.replace("thumb","thumb2x"));
+      $(this).removeClass("to-retinize");
+    });
+}
+function pageLoad() {
+  retinize();
+  var position = <%= position %>;
+  var maxpos = <%= maxpos %>;
+  var pageSize = <%= pageSize %>;
+  var dwh = $(document).height() - $(window).height() - 300;
+  var update = function() {
+    if(position+pageSize < maxpos && $(window).scrollTop() >= dwh) {
+      position = position + pageSize;
+      $.get(position + "/append/",function(data) {
+        $("ul.thumbnails").append(data);
+        retinize();
+        setTimeout(update,50); // In case of huge scrollings
+      });
+    }
+  };
+  $(window).scroll(update);
+  update();
+}
+function pageUnload() {
+  $(window).unbind("scroll");
+  
+}
+</script>
+</div>
