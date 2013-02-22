@@ -38,13 +38,28 @@ ImageDB.delField = function(id,key,val) {
   });
 }
 
-ImageDB.tags = function(callback) {
-  client.smembers("tags", function(err,m) {
+ImageDB.listFields = function(name,callback) {
+  client.smembers(name, function(err,m) {
     if(err) throw err;
     if(_.isNull(m)) callback(new Array());
     else callback(m.sort());
   });
 }
+ImageDB.listImages = function(name,callback) {
+  client.smembers(name, function(err,m) {
+    if(err) throw err;
+    if(_.isNull(m)) callback(new Array());
+    else callback(_.sortBy(m,function(num){ return 0-num; }));
+  });
+}
+ImageDB.tags = _.partial(ImageDB.listFields,"tags");
+ImageDB.authors = _.partial(ImageDB.listFields,"authors");
+ImageDB.uploaders = _.partial(ImageDB.listFields,"uploaders");
+ImageDB.images = _.partial(ImageDB.listImages,"images");
+ImageDB.imagesBy = function(key,val,callback){
+  this.listImages(key+":"+val,callback);
+}
+
 ImageDB.images = function(callback) {
   client.smembers("images", function(err,m){
     if(err) throw err;

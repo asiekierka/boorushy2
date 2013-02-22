@@ -98,11 +98,10 @@ app.use("/image/",function(req,res) {
   });
 });
 function listImages(res,images1,p,p2,sub1,sub2) {
-  var start = parseInt(p) || 0;
+  var start = parseInt(p) || -1;
   var isRaw = p2 || false;
   var noHeader = false;
-  if(parseInt(p)==NaN) { start = 0; isRaw = p; }
-  console.log("listImages: " + start + " " + isRaw);
+  if(start < 0) { start = 0; isRaw = p; }
   imageDB.range(images1,start,config.pageSize,function(images2) {
     var conf = {images: images2, position: start, maxpos: images1.length};
     if(_.isString(sub2))
