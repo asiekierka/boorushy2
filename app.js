@@ -6,7 +6,8 @@ var express = require('express')
   , imageDB = require('./imagedb.js').ImageDB
   , im = require('imagemagick')
   , path = require('path')
-  , qs = require('querystring');
+  , qs = require('querystring')
+  , crypto = require('crypto');
 
 _.str = require('underscore.string');
 _.mixin(_.str.exports());
@@ -52,22 +53,26 @@ function thumbnail(src,dest,dest2x,w,h) {
 }
 
 function addImage(rawdata,format,info,callback) {
-  imageDB.count("imageId",function(err,id) {
-    var path = id+"."+format;
-    console.log("Writing file " + id);
-    fs.writeFile("img/src/"+path,rawdata,"utf8",function() {
-      console.log("Identifying file " + id);
-      im.identify("img/src/"+path, function(err,features) {
-        if(err) throw err;
-        var data = { id: id, format: format, filename: path, originalFilename: info.filename,
-                     width: features.width, height: features.height};
-        data = _.defaults(data,info);
-        imageDB.set(id,_.defaults(data,defaultImage));
-        thumbnail("img/src/"+path,"img/thumb/"+path,"img/thumb2x/"+path,features.width,features.height);
-        if(_.isFunction(callback)) callback();
+  var hash = crypto.createHash('md5').update(rawdata).digest('hex');
+  imageDB.hashed(hash,function(cont) {
+    if(!cont) imageDB.count("imageId",function(err,id) {
+      var path = id+"."+format;
+      console.log("Writing file " + id);
+      fs.writeFile("img/src/"+path,rawdata,"utf8",function() {
+        console.log("Identifying file " + id);
+        im.identify("img/src/"+path, function(err,features) {
+          if(err) throw err;
+          var data = { id: id, format: format, filename: path, originalFilename: info.filename,
+                       width: features.width, height: features.height, hash: hash};
+          data = _.defaults(data,info);
+          imageDB.set(id,_.defaults(data,defaultImage));
+          thumbnail("img/src/"+path,"img/thumb/"+path,"img/thumb2x/"+path,features.width,features.height);
+          if(_.isFunction(callback)) callback();
+        });
       });
-    });
-  });  
+    });  
+    else if(_.isFunction(callback)) callback(new Error("File already exists!"));
+  });
 }
 
 function makeRawTemplate(name,conf,noHeader) {

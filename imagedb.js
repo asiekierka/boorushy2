@@ -90,21 +90,33 @@ ImageDB.add = function(data,callback) {
       callback(count);
   });
 }
-ImageDB.set = function(id,data,callback) {
+ImageDB.hashed = function(hash,callback) {
+  client.sismember("hashes",hash,function(err,ishashed) {
+    callback(ishashed);
+  });
+}
+
+ImageDB.set = function(id,data,callback,noHashCheck) {
   data.id = id;
   var self = this;
-  client.exists("data:"+id,function(err,exists) {
-    var s = function() {
-      async.parallel([
-        _.bind(client.set,client,"data:"+id,JSON.stringify(data)),
-        _.bind(client.sadd,client,"images",id),
-        function(callback) { async.each(data.tags,_.bind(self.addField,self,id,"tag"), callback); },
-        _.bind(self.addField,self,id,"author",data.author),
-        _.bind(self.addField,self,id,"uploader",data.uploader)
-      ], callback);
-    };
-    if(exists) self.get(id,function(data) { self.unset(id,s,true); });
-    else s();
+  client.sismember("hashes",data.hash,function(err,ishashed) {
+    if(err) throw err;
+    if(noHashCheck || !ishashed)
+      client.exists("data:"+id,function(err,exists) {
+        var s = function() {
+          async.parallel([
+            _.bind(client.set,client,"data:"+id,JSON.stringify(data)),
+            _.bind(client.sadd,client,"images",id),
+            _.bind(client.sadd,client,"hashes",data.hash),
+           function(callback) { async.each(data.tags,_.bind(self.addField,self,id,"tag"), callback); },
+            _.bind(self.addField,self,id,"author",data.author),
+            _.bind(self.addField,self,id,"uploader",data.uploader)
+          ], callback);
+        };
+        if(exists) self.get(id,function(data) { self.unset(id,s,true); });
+        else s();
+      });
+    else { if(callback) callback(new Error("File already exists!")); else return; }    
   });
 }
 
@@ -120,6 +132,7 @@ ImageDB.unset = function(id,callback,dontTouchData) {
     async.parallel([
       function(callback) { if(!dontTouchData) client.del("data:"+id,callback); else callback(); },
       function(callback) { if(!dontTouchData) client.srem("images",id,callback); else callback(); },
+      function(callback) { if(!dontTouchData) client.srem("hashes",data.hash,callback); else callback(); },
       _.bind(t.unsetTags,t,id,data.tags),
       _.bind(t.delField,t,id,"author",data.author),
       _.bind(t.delField,t,id,"uploader",data.uploader)
