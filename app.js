@@ -52,7 +52,7 @@ function thumbnail(src,dest,dest2x,w,h,grav) {
   else { copy(src,dest); t2(); }
 }
 
-function addImage(rawdata,format,info,callback,grav) {
+function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
   var hash = crypto.createHash('md5').update(rawdata).digest('hex');
   imageDB.hashed(hash,function(cont) {
     if(!cont) imageDB.count("imageId",function(err,id) {
@@ -66,7 +66,7 @@ function addImage(rawdata,format,info,callback,grav) {
                        width: features.width, height: features.height, hash: hash, thumbnailGravity: grav || "center"};
           data = _.defaults(data,info);
           imageDB.set(id,_.defaults(data,defaultImage));
-          thumbnail("img/src/"+path,"img/thumb/"+path,"img/thumb2x/"+path,features.width,features.height,grav);
+          thumbnail(thumbnailsrc || ("img/src/"+path),"img/thumb/"+path,"img/thumb2x/"+path,thumbnailsrc?600:features.width,thumbnailsrc?600:features.height,grav);
           if(_.isFunction(callback)) callback();
         });
       });
@@ -123,10 +123,12 @@ app.post("/upload/post", function(req,res) {
   var metadata = req.body;
   metadata.tags = tagArray(req.body.tags_string);
   var fn = req.files.image.name;
+  var thfn = null;
+  if(req.files.thumbnail) thfn = req.files.thumbnail.path;
   var ext = fileExt(fn);
   fs.readFile(req.files.image.path, function(err, data) {
     if(err) throw err;
-    addImage(data,ext,req.body,function(){ res.send("OK"); },req.body.gravity);
+    addImage(data,ext,req.body,function(){ res.send("OK"); },thfn,req.body.gravity);
   });
 });
 app.get("/delete/*", function(req,res) {
