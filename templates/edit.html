@@ -13,6 +13,18 @@
 <input type="text" name="author" value="<%= image.author %>">
 <label>Source</label>
 <input type="text" name="source" value="<%= image.source %>">
+<label>Thumbnail location</label>
+<select name="gravity">
+  <option>Center</option>
+  <option>NorthWest</option>
+  <option>North</option>
+  <option>NorthEast</option>
+  <option>West</option>
+  <option>East</option>
+  <option>SouthWest</option>
+  <option>South</option>
+  <option>SouthEast</option>
+</select>
 <label>Custom thumbnail (600x600) [optional]</label>
 <input type="file" name="thumbnail" id="input-thumbnail">
 <label>Tags</label>

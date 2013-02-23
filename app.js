@@ -158,9 +158,10 @@ app.post("/edit/*",function(req,res) {
     data.name = req.body.name || data.name;
     data.author = req.body.author || data.author;
     data.source = req.body.source || data.source;
+    data.thumbnailGravity = req.body.gravity || data.thumbnailGravity;
     data.tags = tagArray(req.body.tags_string) || [];
     if(req.files && req.files.thumbnail)
-      thumbnail(req.files.thumbnail.path,"img/thumb/"+data.filename,"img/thumb2x/"+data.filename,600,600,data.grav);
+      thumbnail(req.files.thumbnail.path,"img/thumb/"+data.filename,"img/thumb2x/"+data.filename,600,600,data.thumbnailGravity);
     imageDB.set(id,data);
     res.redirect("/");
   });
