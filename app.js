@@ -5,7 +5,6 @@ var express = require('express')
   , JSON = require('JSON2')
   , imageDB = require('./imagedb.js').ImageDB
   , im = require('imagemagick')
-  , program = require('commander')
   , path = require('path')
   , qs = require('querystring');
 
@@ -164,12 +163,3 @@ app.get("/*",function(req,res) {
 imageDB.connect();
 app.listen(config.port);
 console.log("Working on port " + config.port);
-
-program.version("0.0.1");
-program.command("add [file]")
-       .description("add file to db")
-       .action(function(filename){
-         addImage(fs.readFileSync(filename),fileExt(filename),{tags: ["test","less tests"],filename: filename});
-       });
-
-program.parse(process.argv);

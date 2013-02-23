@@ -8,7 +8,6 @@
     "JSON2": "0.1.x",
     "underscore": "1.4.x",
     "mkdirp": "0.3.x",
-    "commander": "1.1.x",
     "redis": "0.8.x",
     "imagemagick": "0.1.x",
     "async": ">=0.2.5",
