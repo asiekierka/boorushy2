@@ -95,6 +95,11 @@ function tagArray(str) {
   return t;
 }
 
+// Auth
+var auth = express.basicAuth(function(user,pass) {
+  return config.users[user] && config.users[user] == pass;
+});
+
 // Create missing directories (just in case)
 mkdirp.sync("img/src");
 mkdirp.sync("img/thumb");
@@ -108,9 +113,9 @@ app.use("/img/",express.static("img"));
 app.use("/img/thumb2x/",express.static("img/thumb"));
 app.use("/img/thumb/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
 app.use("/img/thumb2x/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
-app.all("/upload*",express.basicAuth("admin2","admin"));
-app.all("/edit*",express.basicAuth("admin2","admin"));
-app.all("/delete*",express.basicAuth("admin2","admin"));
+app.all("/upload*",auth);
+app.all("/edit*",auth);
+app.all("/delete*",auth);
 app.post("/upload/post",express.bodyParser());
 app.post("/upload/post", function(req,res) {
   if(!req.files || !req.files.image || !req.body.uploader || !req.body.author)
