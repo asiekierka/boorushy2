@@ -91,14 +91,14 @@ app.use("/upload/",express.basicAuth("admin","admin"));
 app.post("/upload/post",express.bodyParser());
 app.post("/upload/post", function(req,res) {
   if(!req.files || !req.files.image || !req.body.uploader || !req.body.author)
-    { res.send(500); return; }
+    { res.send(500,"INVALID"); return; }
   var metadata = req.body;
   metadata.tags = _.map(req.body.tags_string.split(","), _.trim);
   var fn = req.files.image.name;
   var ext = fileExt(fn);
   fs.readFile(req.files.image.path, function(err, data) {
     if(err) throw err;
-    addImage(data,ext,req.body,function(){ res.redirect("/"); });
+    addImage(data,ext,req.body,function(){ res.send("OK"); });
   });
 });
 app.use("/upload/",function(req,res) {

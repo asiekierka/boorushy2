@@ -1,17 +1,66 @@
+<script src="/static/js/jquery.form.js"></script>
 <div class="row padded-row">
-<div class="span12">
-<form method="post" action="/upload/post" enctype="multipart/form-data">
-<fieldset>
+<div class="span5">
+<form id="upload-form" action="/upload/post" method="post">
+<fieldset id="upload-fields">
 <legend>Upload</legend>
 <input type="hidden" name="uploader" value="<%= username %>">
+<label>Name</label>
+<input type="text" name="name" id="input-name">
 <label>Author</label>
-<input type="text" name="author">
-<label>Tags [comma separated]</label>
-<input type="text" name="tags_string">
+<input type="text" name="author" id="input-author">
 <label>Source</label>
-<input type="text" name="source">
+<input type="text" name="source" id="input-source">
+<label>Tags [comma separated]</label>
+<input type="text" name="tags_string" id="input-tags">
 <label>File</label>
-<input type="file" name="image">
-<button type="submit" class="btn">Submit</button>
+<input type="file" name="image" id="input-image">
+<button type="submit" class="btn" id="button-add">Add</button>
+</fieldset>
 </div>
+<div class="span7">
+<h3>Files</h3>
+<div id="file-list"></div>
+</div>
+</div>
+<div class="row padded-row">
+<div class="span12">
+<hr style="border-color: #DDD;">
+<div style="width: auto; float: left;">
+Progress: None!
+</div>
+<div style="float: right;">
+<button class="btn" id="button-submit">Submit</button>
+</div>
+</div>
+</div>
+<script type="text/javascript">
+var files = [];
+
+function pageLoad(){
+  $('#upload-form').submit(function() {
+    var pid = _.uniqueId("file-list_");
+    $('#file-list').append("<p id='" + pid + "'>" + $('#input-image').val() + '</p>');
+    $(this).ajaxSubmit(function() {
+      $('#'+pid).append(" <b>[OK]</b>");      
+    });
+    return false;
+  });
+  $('#input-image').change(function(e){
+    var fn = $(this).val();
+    console.log(fn);
+    var patt = /([a-z0-9_]+)_by_([a-z0-9_]+)-([a-z0-9]{7,})\.([a-z]{3,4})/;
+    var test = fn.match(patt);
+    console.log(test);
+    if(_.isArray(test) && test.length == 5) { // deviantART
+      $('#input-source').val("http://fav.me/"+test[3]);
+      $('#input-author').val(test[2].replace("_","-"));
+      var n = test[1].replace(/_/g," ").replace(/ +/g," ").trim();
+      n = n.charAt(0).toUpperCase() + n.slice(1);
+      $('#input-name').val(n);
+    }
+  });
+}
+function pageUnload(){}
+</script>
 </div>
