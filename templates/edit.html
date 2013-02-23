@@ -16,11 +16,19 @@
 <label>Tags</label>
 <input type="text" name="tags_string" value="<% print(image.tags.join(", ")); %>">
 <br><button class="btn" type="submit">Edit</button>
+<br><br><button class="btn btn-danger" id="del-button">Delete</button>
 </fieldset>
 </form>
 </div>
 <script type="text/javascript">
-function pageLoad() { }
+function pageLoad() {
+  $("#del-button").click(function(){
+    $.get("/delete/<%= image.id %>/",function(){
+      window.location = "/";
+    });
+    return false;
+  });
+}
 function pageUnload() { }
 </script>
 </div>

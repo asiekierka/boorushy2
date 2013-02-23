@@ -103,9 +103,9 @@ app.use("/img/",express.static("img"));
 app.use("/img/thumb2x/",express.static("img/thumb"));
 app.use("/img/thumb/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
 app.use("/img/thumb2x/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
-app.all("/upload*",express.basicAuth("admin","admin"));
-app.all("/edit*",express.basicAuth("admin","admin"));
-app.all("/delete*",express.basicAuth("admin","admin"));
+app.all("/upload*",express.basicAuth("admin2","admin"));
+app.all("/edit*",express.basicAuth("admin2","admin"));
+app.all("/delete*",express.basicAuth("admin2","admin"));
 app.post("/upload/post",express.bodyParser());
 app.post("/upload/post", function(req,res) {
   if(!req.files || !req.files.image || !req.body.uploader || !req.body.author)
@@ -121,6 +121,7 @@ app.post("/upload/post", function(req,res) {
 });
 app.get("/delete/*", function(req,res) {
   var p = qs.unescape(req.path).split("/");
+  console.log("Deleting ID " + p[2]);
   imageDB.unset(p[2],function(){res.redirect("/");});
 });
 app.get("/upload/*",function(req,res) {

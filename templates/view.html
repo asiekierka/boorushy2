@@ -13,7 +13,8 @@ Tags: <%
   });
 %><br>
 Author: <a href="/author/<%= image.author %>/"><%= image.author %></a> (<a href="<%= image.source %>">Source</a>)<br>
-Uploaded by <a href="/uploader/<%= image.uploader %>/"><%= image.uploader %></a>
+Uploaded by <a href="/uploader/<%= image.uploader %>/"><%= image.uploader %></a> [<a href="/edit/<%= image.id 
+%>/">edit</a>]
 </div>
 <script type="text/javascript">
 var iw = <%= image.width %>;
