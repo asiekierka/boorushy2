@@ -182,6 +182,8 @@ function listImages(res,images1,p,p2,sub1,sub2) {
     var conf = {images: images2, position: start, maxpos: images1.length};
     if(_.isString(sub2))
       conf.subtitle = _.capitalize(sub1)+": "+sub2;
+    else
+      conf.subtitle = "Now with " + conf.maxpos + " images!";
     var imagesLi = makeRawTemplate("images-li",conf,"raw",true);
     conf.imagesLi = imagesLi;
     if(isRaw == "append") res.send(conf.imagesLi);
