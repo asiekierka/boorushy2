@@ -54,7 +54,9 @@ function thumbnail(src,dest,dest2x,w,h) {
 function addImage(rawdata,format,info,callback) {
   imageDB.count("imageId",function(err,id) {
     var path = id+"."+format;
+    console.log("Writing file " + id);
     fs.writeFile("img/src/"+path,rawdata,"utf8",function() {
+      console.log("Identifying file " + id);
       im.identify("img/src/"+path, function(err,features) {
         if(err) throw err;
         var data = { id: id, format: format, filename: path, originalFilename: info.filename,
@@ -103,6 +105,7 @@ app.use("/img/thumb/", function(req,res) { res.redirect("/static/img/thumbnotfou
 app.use("/img/thumb2x/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
 app.all("/upload*",express.basicAuth("admin","admin"));
 app.all("/edit*",express.basicAuth("admin","admin"));
+app.all("/delete*",express.basicAuth("admin","admin"));
 app.post("/upload/post",express.bodyParser());
 app.post("/upload/post", function(req,res) {
   if(!req.files || !req.files.image || !req.body.uploader || !req.body.author)
@@ -116,6 +119,10 @@ app.post("/upload/post", function(req,res) {
     addImage(data,ext,req.body,function(){ res.send("OK"); });
   });
 });
+app.get("/delete/*", function(req,res) {
+  var p = qs.unescape(req.path).split("/");
+  imageDB.unset(p[2],function(){res.redirect("/");});
+});
 app.get("/upload/*",function(req,res) {
   var p = qs.unescape(req.path).split("/");
   res.send(makeTemplate("upload",{username: "admin"},p[2]));
@@ -123,6 +130,7 @@ app.get("/upload/*",function(req,res) {
 app.get("/image/*",function(req,res) {
   var p = qs.unescape(req.path).split("/");
   imageDB.get(p[2],function(data) {
+    if(data==null) { res.send(404,"Image not found!"); return; }
     res.send(makeTemplate("view",{image: _.defaults(data, defaultImage)},p[3]));
   });
 });
@@ -132,6 +140,7 @@ app.post("/edit/*",function(req,res) {
   var id = p[2];
   imageDB.get(id,function(dat) {
     var data = dat;
+    if(data==null) { res.send(404,"Image not found!"); return; }
     data.name = req.body.name;
     data.author = req.body.author;
     data.source = req.body.source;
@@ -143,6 +152,7 @@ app.post("/edit/*",function(req,res) {
 app.get("/edit/*",function(req,res) {
   var p = qs.unescape(req.path).split("/");
   imageDB.get(p[2],function(data) {
+    if(data==null) { res.send(404,"Image not found!"); return; }
     res.send(makeTemplate("edit",{image: _.defaults(data, defaultImage, {tags: []})},p[2]));
   });
 });

@@ -116,6 +116,7 @@ ImageDB.unsetTags = function(id,tags,callback) {
 ImageDB.unset = function(id,callback,dontTouchData) {
   var t = this;
   this.get(id,function(data) {
+    if(data == null) callback();
     async.parallel([
       function(callback) { if(!dontTouchData) client.del("data:"+id,callback); else callback(); },
       function(callback) { if(!dontTouchData) client.srem("images",id,callback); else callback(); },
