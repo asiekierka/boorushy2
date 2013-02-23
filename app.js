@@ -44,6 +44,7 @@ function copy(src,dest) {
 }
 
 function thumbnail(src,dest,dest2x,w,h,grav) {
+  console.log("thumbnail called");
   t2 = function() {
     if(_.isString(dest2x) && (w>thumbW || h>thumbH))
       resize(src,dest2x,thumbW*2,thumbH*2,null,grav);
@@ -154,10 +155,12 @@ app.post("/edit/*",function(req,res) {
   imageDB.get(id,function(dat) {
     var data = dat;
     if(data==null) { res.send(404,"Image not found!"); return; }
-    data.name = req.body.name;
-    data.author = req.body.author;
-    data.source = req.body.source;
+    data.name = req.body.name || data.name;
+    data.author = req.body.author || data.author;
+    data.source = req.body.source || data.source;
     data.tags = tagArray(req.body.tags_string) || [];
+    if(req.files && req.files.thumbnail)
+      thumbnail(req.files.thumbnail.path,"img/thumb/"+data.filename,"img/thumb2x/"+data.filename,600,600,data.grav);
     imageDB.set(id,data);
     res.redirect("/");
   });

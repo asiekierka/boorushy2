@@ -122,7 +122,8 @@ ImageDB.set = function(id,data,callback,noHashCheck) {
 
 ImageDB.unsetTags = function(id,tags,callback) {
   var t = this;
-  async.each(tags,_.bind(t.delField,t,id,"tag"),callback);
+  if(tags == null || tags.length == 0) callback();
+  else async.each(tags,_.bind(t.delField,t,id,"tag"),callback);
 }
 
 ImageDB.unset = function(id,callback,dontTouchData) {
