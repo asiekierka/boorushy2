@@ -32,27 +32,27 @@ function fileExt(name) {
 
 var thumbW = 300, thumbH = 300;
 
-function resize(src,dest,w,h,cb) {
+function resize(src,dest,w,h,cb,grav) {
   var cnf = { srcPath: src, dstPath: dest,
-              width: w, height: h+"^",
-              customArgs: [ "-dispose", 2, "-coalesce", "-gravity", "center", "-extent", w+"x"+h, "-layers", "OptimizePlus"] };
-  im.resize(cnf,null,cb);
+              width: w, height: h+"^", quality: 0.9,
+              customArgs: [ "-dispose", 2, "-coalesce", "-gravity", grav || "center", "-extent", w+"x"+h, "-layers", "OptimizePlus"] };
+  im.resize(_.defaults(cnf),cb);
 }
 
 function copy(src,dest) {
   fs.createReadStream(src).pipe(fs.createWriteStream(dest));
 }
 
-function thumbnail(src,dest,dest2x,w,h) {
+function thumbnail(src,dest,dest2x,w,h,grav) {
   t2 = function() {
-    if(_.isString(dest2x) && thumbW*2<w || thumbH*2<h)
-      resize(src,dest2x,thumbW*2,thumbH*2);
+    if(_.isString(dest2x) && (w>thumbW || h>thumbH))
+      resize(src,dest2x,thumbW*2,thumbH*2,null,grav);
   };
-  if(thumbW<w || thumbH<h) resize(src,dest,thumbW,thumbH,t2);
+  if(thumbW<w || thumbH<h) resize(src,dest,thumbW,thumbH,t2,grav);
   else { copy(src,dest); t2(); }
 }
 
-function addImage(rawdata,format,info,callback) {
+function addImage(rawdata,format,info,callback,grav) {
   var hash = crypto.createHash('md5').update(rawdata).digest('hex');
   imageDB.hashed(hash,function(cont) {
     if(!cont) imageDB.count("imageId",function(err,id) {
@@ -63,10 +63,10 @@ function addImage(rawdata,format,info,callback) {
         im.identify("img/src/"+path, function(err,features) {
           if(err) throw err;
           var data = { id: id, format: format, filename: path, originalFilename: info.filename,
-                       width: features.width, height: features.height, hash: hash};
+                       width: features.width, height: features.height, hash: hash, thumbnailGravity: grav || "center"};
           data = _.defaults(data,info);
           imageDB.set(id,_.defaults(data,defaultImage));
-          thumbnail("img/src/"+path,"img/thumb/"+path,"img/thumb2x/"+path,features.width,features.height);
+          thumbnail("img/src/"+path,"img/thumb/"+path,"img/thumb2x/"+path,features.width,features.height,grav);
           if(_.isFunction(callback)) callback();
         });
       });
@@ -121,7 +121,7 @@ app.post("/upload/post", function(req,res) {
   var ext = fileExt(fn);
   fs.readFile(req.files.image.path, function(err, data) {
     if(err) throw err;
-    addImage(data,ext,req.body,function(){ res.send("OK"); });
+    addImage(data,ext,req.body,function(){ res.send("OK"); },req.body.gravity);
   });
 });
 app.get("/delete/*", function(req,res) {
