@@ -3,6 +3,7 @@
 <a href="/img/src/<%= image.filename %>">
 <img src="/img/src/<%= image.filename %>" style="max-width: 100%; height: auto;" class="img-polaroid to-resize">
 </a><br><br>
+<h3><%= image.name %></h3>
 Tags: <%
   var t = 0;
   _.each(image.tags,function(v) {

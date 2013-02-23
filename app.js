@@ -75,6 +75,13 @@ function makeTemplate(name,conf,raw,noHeader) {
   return _.template(templates["main"],_.defaults(conf2,{page: makeRawTemplate(name,conf,noHeader)}));
 }
 
+function tagArray(str) {
+  var t = str.split(",");
+  t = _.map(t,function(v){return v.trim();});
+  console.log(t);
+  return t;
+}
+
 // Create missing directories (just in case)
 mkdirp.sync("img/src");
 mkdirp.sync("img/thumb");
@@ -87,13 +94,14 @@ app.use("/static/",express.static("static"));
 app.use("/img/",express.static("img"));
 app.use("/img/thumb/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
 app.use("/img/thumb2x/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
-app.use("/upload/",express.basicAuth("admin","admin"));
+app.all("/upload*",express.basicAuth("admin","admin"));
+app.all("/edit*",express.basicAuth("admin","admin"));
 app.post("/upload/post",express.bodyParser());
 app.post("/upload/post", function(req,res) {
   if(!req.files || !req.files.image || !req.body.uploader || !req.body.author)
     { res.send(500,"INVALID"); return; }
   var metadata = req.body;
-  metadata.tags = _.map(req.body.tags_string.split(","), _.trim);
+  metadata.tags = tagArray(req.body.tags_string);
   var fn = req.files.image.name;
   var ext = fileExt(fn);
   fs.readFile(req.files.image.path, function(err, data) {
@@ -101,15 +109,34 @@ app.post("/upload/post", function(req,res) {
     addImage(data,ext,req.body,function(){ res.send("OK"); });
   });
 });
-app.use("/upload/",function(req,res) {
+app.get("/upload/*",function(req,res) {
   var p = qs.unescape(req.path).split("/");
-  res.send(makeTemplate("upload",{username: "admin"},p[1]));
+  res.send(makeTemplate("upload",{username: "admin"},p[2]));
 });
-app.use("/image/",function(req,res) {
+app.get("/image/*",function(req,res) {
   var p = qs.unescape(req.path).split("/");
-  if(!p[1]) res.send(500);
-  imageDB.get(p[1],function(data) {
-    res.send(makeTemplate("view",{image: _.defaults(data, defaultImage)},p[2]));
+  imageDB.get(p[2],function(data) {
+    res.send(makeTemplate("view",{image: _.defaults(data, defaultImage)},p[3]));
+  });
+});
+app.post("/edit/*",express.bodyParser());
+app.post("/edit/*",function(req,res) {
+  var p = qs.unescape(req.path).split("/");
+  var id = p[2];
+  imageDB.get(id,function(dat) {
+    var data = dat;
+    data.name = req.body.name;
+    data.author = req.body.author;
+    data.source = req.body.source;
+    data.tags = tagArray(req.body.tags_string) || [];
+    imageDB.set(id,data);
+    res.redirect("/");
+  });
+});
+app.get("/edit/*",function(req,res) {
+  var p = qs.unescape(req.path).split("/");
+  imageDB.get(p[2],function(data) {
+    res.send(makeTemplate("edit",{image: _.defaults(data, defaultImage, {tags: []})},p[2]));
   });
 });
 function listImages(res,images1,p,p2,sub1,sub2) {
@@ -127,7 +154,7 @@ function listImages(res,images1,p,p2,sub1,sub2) {
     else res.send(makeTemplate("images",conf,isRaw,noHeader));
   });
 }
-app.use("/",function(req,res) {
+app.get("/*",function(req,res) {
   var p = qs.unescape(req.path).split("/");
   console.log("Request: " + JSON.stringify(p)); 
   if(p.length>2 && (p[1] == "tag" || p[1] == "author" || p[1] == "uploader")) imageDB.imagesBy(p[1],p[2],function(images) { listImages(res,images,p[3],p[4],p[1],p[2]); });

@@ -1,0 +1,26 @@
+<div class="row padded-row">
+<div class="span12" style="text-align: center;">
+<img src="/img/src/<%= image.filename %>" style="max-width: 40%; max-height: 40%;" class="img-polaroid">
+<br><br>
+</div>
+<div class="span6 offset3">
+<form method="post" action="/edit/<%= image.id %>/" id="edit-form">
+<fieldset>
+<legend>Edit</legend>
+<label>Name</label>
+<input type="text" name="name" value="<%= image.name %>">
+<label>Author</label>
+<input type="text" name="author" value="<%= image.author %>">
+<label>Source</label>
+<input type="text" name="source" value="<%= image.source %>">
+<label>Tags</label>
+<input type="text" name="tags_string" value="<% print(image.tags.join(", ")); %>">
+<br><button class="btn" type="submit">Edit</button>
+</fieldset>
+</form>
+</div>
+<script type="text/javascript">
+function pageLoad() { }
+function pageUnload() { }
+</script>
+</div>
