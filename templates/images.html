@@ -1,4 +1,12 @@
 <div class="row padded-row">
+<div class="span12" style="text-align: center;">
+<form class="form-search" id="tag-form">
+<input type="text" id="tag-field" class="input-medium search-query">
+<button id="tag-button" type="submit" class="btn">Search</button>
+</form>
+</div>
+</div>
+<div class="row padded-row">
 <ul class="thumbnails">
 <%= imagesLi %>
 </ul>
@@ -17,6 +25,11 @@ function pageLoad() {
   var maxpos = <%= maxpos %>;
   var pageSize = <%= pageSize %>;
   var isUpdating = false;
+  $("#tag-form").submit(function() {
+    var tag = $("#tag-field").val();
+    setTimeout(function(){redirect("/tag/"+tag+"/");},0);
+    return false;
+  });
   var update = function() {
     if(isUpdating) return;
     if(position+pageSize < maxpos && $(window).scrollTop() >= ($(document).height() - $(window).height() - 300)) {
