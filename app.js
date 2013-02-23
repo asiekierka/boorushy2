@@ -137,9 +137,10 @@ app.get("/delete/*", function(req,res) {
   console.log("Deleting ID " + p[2]);
   imageDB.unset(p[2],function(){res.redirect("/");});
 });
-app.get("/upload*",function(req,res) {
+app.get("/upload*",function(req,res,next) {
   var p = qs.unescape(req.path).split("/");
-  res.send(makeTemplate("upload",{username: "admin"},p[2]));
+  if(p[1] == "uploader") next();
+  else res.send(makeTemplate("upload",{username: "admin"},p[2]));
 });
 app.get("/image/*",function(req,res) {
   var p = qs.unescape(req.path).split("/");
