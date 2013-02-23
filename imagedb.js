@@ -22,15 +22,15 @@ ImageDB.getWithError = function(id,callback) {
   });
 }
 
-ImageDB.exists = function(id,cb) { return client.exists(client,"data:"+id,cb); }
+ImageDB.exists = function(id,callback) { return client.exists(client,"data:"+id,callback); }
 
-ImageDB.addField = function(id,key,val,cb) {
+ImageDB.addField = function(id,key,val,callback) {
   async.parallel([
     _.bind(client.sadd,client,key+"s",val),
     _.bind(client.sadd,client,key+":"+val,id),
-    ], cb);
+    ], callback);
 }
-ImageDB.delField = function(id,key,val,cb) {
+ImageDB.delField = function(id,key,val,callback) {
   async.series([
     _.bind(client.srem,client,key+":"+val,id),
     _.bind(client.scard,client,key+":"+val, function(err,card) {
@@ -39,7 +39,7 @@ ImageDB.delField = function(id,key,val,cb) {
         client.del(key+":"+val);
         client.srem(key+"s",val);
       }})
-    ], cb
+    ], callback
   );
 }
 
@@ -90,7 +90,7 @@ ImageDB.add = function(data,callback) {
       callback(count);
   });
 }
-ImageDB.set = function(id,data,cb) {
+ImageDB.set = function(id,data,callback) {
   data.id = id;
   var self = this;
   client.exists("data:"+id,function(err,exists) {
@@ -98,31 +98,31 @@ ImageDB.set = function(id,data,cb) {
       async.parallel([
         _.bind(client.set,client,"data:"+id,JSON.stringify(data)),
         _.bind(client.sadd,client,"images",id),
-        function(cb) { async.each(data.tags,_.bind(self.addField,self,id,"tag"), cb); },
+        function(callback) { async.each(data.tags,_.bind(self.addField,self,id,"tag"), callback); },
         _.bind(self.addField,self,id,"author",data.author),
         _.bind(self.addField,self,id,"uploader",data.uploader)
-      ], cb);
+      ], callback);
     };
     if(exists) self.get(id,function(data) { self.unset(id,s,true); });
     else s();
   });
 }
 
-ImageDB.unsetTags = function(id,tags,cb) {
+ImageDB.unsetTags = function(id,tags,callback) {
   var t = this;
-  async.each(tags,_.bind(t.delField,t,id,"tag"),cb);
+  async.each(tags,_.bind(t.delField,t,id,"tag"),callback);
 }
 
-ImageDB.unset = function(id,cb,dontTouchData) {
+ImageDB.unset = function(id,callback,dontTouchData) {
   var t = this;
   this.get(id,function(data) {
     async.parallel([
-      function(cb) { if(!dontTouchData) client.del("data:"+id,cb); else cb(); },
-      function(cb) { if(!dontTouchData) client.srem("images",id,cb); else cb(); },
+      function(callback) { if(!dontTouchData) client.del("data:"+id,callback); else callback(); },
+      function(callback) { if(!dontTouchData) client.srem("images",id,callback); else callback(); },
       _.bind(t.unsetTags,t,id,data.tags),
       _.bind(t.delField,t,id,"author",data.author),
       _.bind(t.delField,t,id,"uploader",data.uploader)
-    ],cb);
+    ],callback);
   });
 }
 
