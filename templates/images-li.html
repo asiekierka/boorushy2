@@ -1,5 +1,5 @@
 <% _.each(images, function(img) {
   if(img == null) return;
-  print('<li><a href="/image/'+img.id+'/" class="thumbnail thumbnail-300">');
+  print('<li class="span4"><a href="/image/'+img.id+'/" class="thumbnail thumbnail-300">');
   print('<img src="/img/thumb/'+img.filename+'" class="to-scriptize fade-img" title="'+img.name+'"></a></li>');
 }); %>
