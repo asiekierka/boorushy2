@@ -120,6 +120,7 @@ app.use("/img/thumb2x/", function(req,res) { res.redirect("/static/img/thumbnotf
 app.all("/upload*",auth);
 app.all("/edit*",auth);
 app.all("/delete*",auth);
+app.all("/regenerate*",auth);
 app.post("/upload/post",express.bodyParser());
 app.post("/upload/post", function(req,res) {
   if(!req.files || !req.files.image || !req.body.uploader || !req.body.author)
@@ -139,6 +140,11 @@ app.get("/delete/*", function(req,res) {
   var p = qs.unescape(req.path).split("/");
   console.log("Deleting ID " + p[2]);
   imageDB.unset(p[2],function(){res.redirect("/");});
+});
+app.get("/regenerate/*", function(req,res) {
+  var p = qs.unescape(req.path).split("/");
+  console.log("Regenerating ID " + p[2]);
+  imageDB.regenerate(p[2],function(){res.redirect("/");});
 });
 app.get("/upload*",function(req,res,next) {
   var p = qs.unescape(req.path).split("/");
