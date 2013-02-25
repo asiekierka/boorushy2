@@ -7,7 +7,10 @@ var express = require('express')
   , im = require('imagemagick')
   , path = require('path')
   , qs = require('querystring')
-  , crypto = require('crypto');
+  , crypto = require('crypto')
+  , argv = require('optimist').argv
+  , bar = require('progress-bar')
+  , async = require('async');
 
 _.str = require('underscore.string');
 _.mixin(_.str.exports());
@@ -198,6 +201,24 @@ app.get("/*",function(req,res) {
   else imageDB.images(function(images) { listImages(res,images,p[1],p[2]); });
 });
 
+console.log("Connecting to database...")
 imageDB.connect();
-app.listen(config.port);
-console.log("Working on port " + config.port);
+
+function start() {
+  app.listen(config.port);
+  console.log("Working on port " + config.port);
+}
+
+if(argv.r || argv.regen) {
+  console.log("Regeneration requested, re-indexing images...");
+  imageDB.images(function(images) {
+    var bar = require('progress-bar').create(process.stdout,20);
+    var i = 0;
+    async.eachSeries(images,function(image, callback) { imageDB.regenerate(image,function(){i+=1; bar.update(i/images.length); callback();}); },function(){
+      console.log("\nDone!");
+      start();
+    });
+  });
+}
+else start();
+

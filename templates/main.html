@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -5,6 +6,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="/static/css/bootstrap.min.css" rel="stylesheet" media="screen">
 <style>
+.container {
+  width: auto;
+  max-width: 940px !important;
+}
 .padded-row {
   margin-top: 20px;
 }
@@ -14,7 +19,7 @@ body {
 .thumbnail {
   background-color: #FFF;
 }
-.thumbnail-300 { width: 300px; height: 300px !important; }
+.thumbnail-300 { width: 290px; height: 290px !important; }
 h1 {
  color: #222;
 }
@@ -28,8 +33,7 @@ h1 {
 <script>
 function fixURLs() {
   $("a").each(function(idx) {
-    var href = $(this).attr("href");
-    if(href.indexOf("/src/")<0)
+    if(!$(this).hasClass("no-ajax"))
       $(this).click(changeView);
   });
 }

@@ -1,6 +1,6 @@
 <div class="row padded-row">
 <div class="span12" style="text-align: center;">
-<a href="/img/src/<%= image.filename %>">
+<a href="/img/src/<%= image.filename %>" class="no-ajax">
 <img src="/img/src/<%= image.filename %>" style="max-width: 100%; height: auto;" class="img-polaroid to-resize">
 </a><br><br>
 <h3><%= image.name %></h3>
@@ -12,7 +12,7 @@ Tags: <%
     t+=1;
   });
 %><br>
-Author: <a href="/author/<%= image.author %>/"><%= image.author %></a> (<a href="<%= image.source %>">Source</a>)<br>
+Author: <a href="/author/<%= image.author %>/"><%= image.author %></a> (<a class="no-ajax" href="<%= image.source %>">Source</a>)<br>
 Uploaded by <a href="/uploader/<%= image.uploader %>/"><%= image.uploader %></a> [<a href="/edit/<%= image.id 
 %>/">edit</a>]
 </div>
