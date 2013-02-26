@@ -1,26 +1,34 @@
+// Initialize libraries (quite a lot of them, too!)
 var express = require('express')
   , mkdirp = require('mkdirp')
   , _ = require('underscore')
   , fs = require('fs')
   , JSON = require('JSON2')
   , imageDB = require('./imagedb.js').ImageDB
+  , userDB = require('./userdb.js').UserDB
   , im = require('imagemagick')
   , path = require('path')
   , qs = require('querystring')
   , crypto = require('crypto')
   , argv = require('optimist').argv
   , bar = require('progress-bar')
-  , async = require('async');
+  , async = require('async')
+  , redis = require('redis');
 
 _.str = require('underscore.string');
 _.mixin(_.str.exports());
 
-var app = express()
-  , config = require('./config.json')
+var app = express();
+
+// Configure
+var config = require('./config.json')
   , templates = {};
 
-var defaultImage = { author: "Unknown", source: "/", uploader: "Computer"};
-var defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null};
+var defaultConfig = { salt: "ICannotIntoSalts" }
+  , defaultImage = { author: "Unknown", source: "/", uploader: "Computer"}
+  , defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null};
+
+config = _.defaults(config,defaultConfig);
 
 _.each(fs.readdirSync("templates/"),function(filename) {
   var name = filename.split(".")[0];
@@ -28,6 +36,7 @@ _.each(fs.readdirSync("templates/"),function(filename) {
   templates[name] = fs.readFileSync("templates/"+filename,"utf8");    
 });
 
+// File/thumbnail
 function fileExt(name) {
   var ext = path.extname(name).split(".");
   return ext[ext.length-1];
@@ -56,6 +65,7 @@ function thumbnail(src,dest,dest2x,w,h,grav) {
   else { copy(src,dest); t2(); }
 }
 
+// AddImage
 function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
   var hash = crypto.createHash('md5').update(rawdata).digest('hex');
   imageDB.hashed(hash,function(cont) {
@@ -79,6 +89,7 @@ function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
   });
 }
 
+// Templating
 function makeRawTemplate(name,conf,noHeader) {
   var conf2 = _.defaults(conf,config,defaultSiteConfig);
   var body = _.template(templates[name],conf2);
@@ -92,6 +103,7 @@ function makeTemplate(name,conf,raw,noHeader) {
   return _.template(templates["main"],_.defaults(conf2,{page: makeRawTemplate(name,conf,noHeader)}));
 }
 
+// Tagify string
 function tagArray(str) {
   var t = str.split(",");
   t = _.map(t,function(v){return v.trim();});
@@ -99,11 +111,14 @@ function tagArray(str) {
   return t;
 }
 
-// Auth
-var auth = express.basicAuth(function(user,pass) {
-  return config.users[user] && config.users[user] == pass;
-});
+// Auth code
+app.use(express.cookieParser(config.salt));
+app.use(express.session({key: "booru-user",secret: config.salt}));
 
+function restrict(req,res,next) {
+  if(req.session.user) { next(); }
+  else { req.session.error = "Access denied!"; res.send(403,"Access denied - log in."); }
+}
 // Create missing directories (just in case)
 mkdirp.sync("img/src");
 mkdirp.sync("img/thumb");
@@ -117,14 +132,10 @@ app.use("/img/",express.static("img"));
 app.use("/img/thumb2x/",express.static("img/thumb"));
 app.use("/img/thumb/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
 app.use("/img/thumb2x/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
-app.all("/upload*",auth);
-app.all("/edit*",auth);
-app.all("/delete*",auth);
-app.all("/regenerate*",auth);
 app.post("/upload/post",express.bodyParser());
-app.post("/upload/post", function(req,res) {
+app.post("/upload/post", restrict, function(req,res) {
   if(!req.files || !req.files.image || !req.body.uploader || !req.body.author)
-    { res.send(500,"INVALID"); return; }
+    { res.send(500,"Invalid!"); return; }
   var metadata = req.body;
   metadata.tags = tagArray(req.body.tags_string);
   var fn = req.files.image.name;
@@ -136,30 +147,45 @@ app.post("/upload/post", function(req,res) {
     addImage(data,ext,req.body,function(){ res.send("OK"); },thfn,req.body.gravity);
   });
 });
-app.get("/delete/*", function(req,res) {
+app.get("/logout", function(req,res) {
+  req.session.destroy(function(){ res.redirect("/"); });
+});
+app.post("/login",express.bodyParser());
+app.post("/login", function(req,res) {
+  var encPassword = userDB.hash(req.body.password);
+  userDB.exists(req.body.username, function(err, exists) {
+    if(exists) {
+      userDB.get(req.body.username, function(err, data) {
+        if(data.pass == encPassword) {
+          req.session.regenerate(function() {
+            req.session.user = req.body.username;
+            res.redirect("/");
+          });
+        } else { res.send(403,"Invalid username or password!"); return; }
+      });
+    } else { res.send(403,"Invalid username or password!"); return; }
+  });
+});
+app.get("/login", function(req,res) {
+  res.send(makeTemplate("login",{req: req}));
+});
+app.get("/delete/*", restrict, function(req,res) {
   var p = qs.unescape(req.path).split("/");
   console.log("Deleting ID " + p[2]);
   imageDB.unset(p[2],function(){res.redirect("/");});
 });
-app.get("/regenerate/*", function(req,res) {
+app.get("/regenerate/*", restrict, function(req,res) {
   var p = qs.unescape(req.path).split("/");
   console.log("Regenerating ID " + p[2]);
   imageDB.regenerate(p[2],function(){res.redirect("/");});
 });
-app.get("/upload*",function(req,res,next) {
+app.get("/upload*", restrict, function(req,res,next) {
   var p = qs.unescape(req.path).split("/");
-  if(p[1] == "uploader") next();
-  else res.send(makeTemplate("upload",{username: "admin"},p[2]));
-});
-app.get("/image/*",function(req,res) {
-  var p = qs.unescape(req.path).split("/");
-  imageDB.get(p[2],function(data) {
-    if(data==null) { res.send(404,"Image not found!"); return; }
-    res.send(makeTemplate("view",{image: _.defaults(data, defaultImage)},p[3]));
-  });
+  if(p[1] != "upload") next();
+  else res.send(makeTemplate("upload",{req: req, username: req.session.user},p[2]));
 });
 app.post("/edit/*",express.bodyParser());
-app.post("/edit/*",function(req,res) {
+app.post("/edit/*", restrict, function(req,res) {
   var p = qs.unescape(req.path).split("/");
   var id = p[2];
   imageDB.get(id,function(dat) {
@@ -176,20 +202,27 @@ app.post("/edit/*",function(req,res) {
     res.redirect("/");
   });
 });
-app.get("/edit/*",function(req,res) {
+app.get("/edit/*", restrict, function(req,res) {
   var p = qs.unescape(req.path).split("/");
   imageDB.get(p[2],function(data) {
     if(data==null) { res.send(404,"Image not found!"); return; }
-    res.send(makeTemplate("edit",{image: _.defaults(data, defaultImage, {tags: []})},p[2]));
+    res.send(makeTemplate("edit",{image: _.defaults(data, defaultImage, {tags: []}), req: req},p[2]));
   });
 });
-function listImages(res,images1,p,p2,sub1,sub2) {
+app.get("/image/*",function(req,res) {
+  var p = qs.unescape(req.path).split("/");
+  imageDB.get(p[2],function(data) {
+    if(data==null) { res.send(404,"Image not found!"); return; }
+    res.send(makeTemplate("view",{image: _.defaults(data, defaultImage), req: req},p[3]));
+  });
+});
+function listImages(req,res,images1,p,p2,sub1,sub2) {
   var start = parseInt(p) || -1;
   var isRaw = p2 || false;
   var noHeader = false;
   if(start < 0) { start = 0; isRaw = p; }
   imageDB.range(images1,start,config.pageSize,function(images2) {
-    var conf = {images: images2, position: start, maxpos: images1.length};
+    var conf = {images: images2, position: start, maxpos: images1.length, req: req};
     if(_.isString(sub2))
       conf.subtitle = _.capitalize(sub1)+": "+sub2;
     else
@@ -203,12 +236,29 @@ function listImages(res,images1,p,p2,sub1,sub2) {
 app.get("/*",function(req,res) {
   var p = qs.unescape(req.path).split("/");
   console.log("Request: " + JSON.stringify(p)); 
-  if(p.length>2 && (p[1] == "tag" || p[1] == "author" || p[1] == "uploader")) imageDB.imagesBy(p[1],p[2],function(images) { listImages(res,images,p[3],p[4],p[1],p[2]); });
-  else imageDB.images(function(images) { listImages(res,images,p[1],p[2]); });
+  if(p.length>2 && (p[1] == "tag" || p[1] == "author" || p[1] == "uploader")) imageDB.imagesBy(p[1],p[2],function(images) { listImages(req,res,images,p[3],p[4],p[1],p[2]); });
+  else imageDB.images(function(images) { listImages(req,res,images,p[1],p[2]); });
 });
 
+// Config validation
+if(config.salt == defaultConfig.salt || config.salt.length < 16) {
+  if(config.salt.length > 0 && config.salt.length < 16) { console.log("\nWARNING: Your salt is too short (minimum 16 characters)."); }
+  console.log("\n!!!!!!! WARNING !!!!!!!\nThe server has been disabled until you change the *encryption salt*.\nChange it to something secure in config.json.");
+  process.exit(0);
+}
+
 console.log("Connecting to database...")
-imageDB.connect();
+var client = redis.createClient();
+imageDB.connect(client);
+userDB.connect(client, config.salt);
+
+userDB.exists("admin", function(err, exists) {
+  if(!err && !exists) {
+    console.log("Creating default admin user... [password: admin]");
+    userDB.addUser({user: "admin", pass: userDB.hash("admin"), nick: "admin"});
+  }
+  else if(err) { console.log("Error checking userDB! " + err.message); }
+});
 
 function start() {
   app.listen(config.port);

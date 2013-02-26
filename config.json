@@ -1,4 +1,5 @@
 { "port": 8080, "pageSize": 15, "title": "Boorushy v.2", "htmlTitle": "Boorushy<sub>2</sub>",
+  "salt": "",
   "users": {
    "admin": "admin1"
   }
