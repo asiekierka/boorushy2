@@ -131,6 +131,13 @@ function getImage(req,res,next) {
     next();
   });
 }
+function getImagePost(req,res,next) {
+  imageDB.get(req.body.id,function(data) {
+    if(data==null) { res.send(404,"Image not found!"); return; }
+    req.image = data;
+    next();
+  });
+}
 
 // Create missing directories (just in case)
 mkdirp.sync("img/src");
@@ -194,7 +201,8 @@ app.get("/regenerate/*", restrictAdmin, parse, function(req,res) {
 app.get("/upload", restrict, parse, function(req,res,next) {
   res.send(makeTemplate("upload",{req: req, username: req.session.user},req.params[0]));
 });
-app.post("/edit/*", express.bodyParser(), parse, getImage, function(req,res) {
+app.post("/edit", express.bodyParser(), getImagePost, function(req,res) {
+  console.log("/edit");
   var image = req.image;
   image.name = req.body.name || image.name;
   image.author = req.body.author || image.author;
@@ -203,8 +211,9 @@ app.post("/edit/*", express.bodyParser(), parse, getImage, function(req,res) {
   image.tags = tagArray(req.body.tags_string) || image.tags || [];
   if(req.files && req.files.thumbnail)
     thumbnail(req.files.thumbnail.path,"img/thumb/"+image.filename,"img/thumb2x/"+image.filename,thumbW*2,thumbH*2,image.thumbnailGravity);
-  imageDB.set(image.id,image);
-  res.redirect("/");
+  imageDB.set(image.id,image,function() {
+    res.redirect("/");
+  }, true);
 });
 app.get("/edit/*", parse, getImage, function(req,res) {
   res.send(makeTemplate("edit",{image: _.defaults(req.image, defaultImage), req: req},req.params[0]));
