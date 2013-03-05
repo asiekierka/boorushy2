@@ -64,7 +64,18 @@ QueryParser.parse = function(query) {
       });
     if(r != {}) result.push(r);
   });
-  return result;
+  var rpnResult = []
+    , lStack = []
+    , nums = 0;
+  _.each(result, function(r) {
+    if(r.type=="linker") lStack.push(r);
+    else { rpnResult.push(r); nums++; }
+    if(nums == 2 && lStack.length>0) {
+      nums--; rpnResult.push(lStack.pop());
+    }
+  });
+  _.each(lStack, function(r) { rpnResult.push(r); });
+  return rpnResult;
 };
 
 console.log(QueryParser.parse("tags and friendship or !magic and width>1920 & author=brony"));
