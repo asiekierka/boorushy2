@@ -4,7 +4,7 @@ var _ = require('underscore')
 var typeParsers = {
   "numeric": /^([a-z]+)([<=>])([0-9]+)$/,
   "string": /^([a-z]+)(=)([a-zA-Z0-9]+)$/,
-  "tag": /^(!?)([a-z]+)$/
+  "tag": /^(!?)([-a-z0-9 _]+)$/
 };
 
 var linkers = {
@@ -64,9 +64,7 @@ QueryParser.parse = function(query) {
       });
     if(r != {}) result.push(r);
   });
-  var rpnResult = []
-    , lStack = []
-    , nums = 0;
+  var rpnResult = [], lStack = [], nums = 0;
   _.each(result, function(r) {
     if(r.type=="linker") lStack.push(r);
     else { rpnResult.push(r); nums++; }
@@ -78,4 +76,7 @@ QueryParser.parse = function(query) {
   return rpnResult;
 };
 
+exports.QueryParser = QueryParser;
+
+// Test!
 console.log(QueryParser.parse("tags and friendship or !magic and width>1920 & author=brony"));

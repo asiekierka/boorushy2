@@ -27,7 +27,7 @@ var config = require('./config.json')
 
 var defaultConfig = { salt: "ICannotIntoSalts" }
   , defaultImage = { author: "Unknown", source: "/", uploader: "Computer"}
-  , defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null};
+  , defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null, noAjaxLoad: false};
 
 config = _.defaults(config,defaultConfig);
 
@@ -168,11 +168,47 @@ app.post("/upload/post", restrict, function(req,res) {
     addImage(data,ext,req.body,function(){ res.send("OK"); },thfn,req.body.gravity);
   });
 });
+
+function handleQuery(entry,images,allImages) {
+  if(entry.invert) return _(allImages).without(images);
+  return images;
+}
+app.post("/search",express.bodyParser(), function(req,res) {
+  var query = queryparser.parse(req.body.query);
+  var stack = [];
+  console.log(query);
+  imageDB.images(function(allImages) {
+    async.eachSeries(query, function(entry, next) {
+      if(entry.type == "tag") {
+        imageDB.imagesBy("tag",entry.key,function(images) { stack.push(handleQuery(entry,images,allImages)); next(); });
+      } else if(entry.type == "string") {
+        imageDB.imagesBy(entry.key,entry.value,function(images) { stack.push(handleQuery(entry,images,allImages)); next(); });
+      } else if(entry.type == "linker" && stack.length >= 2) {
+        var p1 = stack.pop()
+          , p2 = stack.pop();
+        if(entry.link == "or") stack.push(_.union(p1,p2));
+        else if(entry.link == "and") stack.push(_.intersection(p1,p2));
+        else if(entry.link == "xor") {
+          var p3 = [];
+          _.each(_.union(p1,p2),function(val) {
+            if(_.contains(p1,val) != _.contains(p2,val)) p3.push(val);
+          });
+          stack.push(p3);
+        }
+        next();
+      } else next();
+    }, function() {
+      // Done sorting!
+      if(stack.length > 1) { res.send(500,"Something quite bad happened! "+JSON.stringify(stack)); return; }
+      var result = stack.pop();
+      listImages(req,res,result,0,false,{noAjaxLoad: true, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
+    });
+  });
+});
 app.get("/logout", function(req,res) {
   req.session.destroy(function(){ res.redirect("/"); });
 });
-app.post("/login",express.bodyParser());
-app.post("/login", function(req,res) {
+app.post("/login", express.bodyParser(), function(req,res) {
   var encPassword = userDB.hash(req.body.password);
   userDB.exists(req.body.username, function(err, exists) {
     if(exists) {
@@ -202,7 +238,7 @@ app.get("/regenerate/*", restrictAdmin, parse, function(req,res) {
 app.get("/upload", restrict, parse, function(req,res,next) {
   res.send(makeTemplate("upload",{req: req, username: req.session.user},req.params[0]));
 });
-app.post("/edit", express.bodyParser(), getImagePost, function(req,res) {
+app.post("/edit", express.bodyParser(), restrict, getImagePost, function(req,res) {
   console.log("/edit");
   var image = req.image;
   image.name = req.body.name || image.name;
@@ -216,22 +252,22 @@ app.post("/edit", express.bodyParser(), getImagePost, function(req,res) {
     res.redirect("/");
   }, true);
 });
-app.get("/edit/*", parse, getImage, function(req,res) {
+app.get("/edit/*", restrict, parse, getImage, function(req,res) {
   res.send(makeTemplate("edit",{image: _.defaults(req.image, defaultImage), req: req},req.params[0]));
 });
 app.get("/image/*", parse, getImage, function(req,res) {
   res.send(makeTemplate("view",{image: _.defaults(req.image, defaultImage), req: req},req.params[0]));
 });
-function listImages(req,res,images1,p,p2,sub1,sub2) {
+function listImages(req,res,images1,p,p2,sub1,sub2,defConfig,maxVal) {
   var start = parseInt(p) || -1;
   var isRaw = p2 || false;
   var noHeader = false;
   if(start < 0) { start = 0; isRaw = p; }
-  imageDB.range(images1,start,config.pageSize,function(images2) {
-    var conf = {images: images2, position: start, maxpos: images1.length, req: req};
+  imageDB.range(images1,start,maxVal || config.pageSize,function(images2) {
+    var conf = _.defaults({images: images2, position: start, maxpos: images1.length, req: req}, defConfig || {});
     if(_.isString(sub2))
       conf.subtitle = _.capitalize(sub1)+": "+sub2;
-    else
+    else if(!conf.subtitle)
       conf.subtitle = "Now with " + conf.maxpos + " images!";
     var imagesLi = makeRawTemplate("images-li",conf,"raw",true);
     conf.imagesLi = imagesLi;
