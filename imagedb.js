@@ -43,6 +43,13 @@ ImageDB.images = _.partial(ImageDB.listImages,"images");
 ImageDB.imagesBy = function(key,val,callback){
   this.listImages(key+":"+val,callback);
 }
+ImageDB.imagesByNum = function(key,min,max,callback){
+  client.zrangebyscore("size:"+key,min,max,function(err,m) {
+    if(err) throw err;
+    if(_.isNull(m)) callback(new Array());
+    else callback(_.sortBy(m,function(num){ return 0-num; }));
+  });
+}
 ImageDB.range = function(arr2,s,l,callback) {
   var out = new Array();
   var arr = arr2;
@@ -182,5 +189,6 @@ ImageDB.unset = function(id,callback,dontTouchData) {
     ],callback);
   });
 }
+
 
 exports.ImageDB = ImageDB;

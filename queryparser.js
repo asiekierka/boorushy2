@@ -2,7 +2,7 @@ var _ = require('underscore')
   , QueryParser = {};
 
 var typeParsers = {
-  "numeric": /^([a-z]+)([<=>])([0-9]+)$/,
+  "numeric": /^([a-z]+)([<=>]=?)([0-9]+)$/,
   "string": /^([a-z]+)(=)([a-zA-Z0-9]+)$/,
   "tag": /^(!?)([-a-z0-9 _]+)$/
 };
@@ -18,7 +18,8 @@ var signs = {
   ">": "gt",
   "<=": "le",
   ">=": "ge",
-  "=": "eq"
+  "=": "eq",
+  "==": "eq"
 };
 
 QueryParser.check = function(valueT,sign,value) {

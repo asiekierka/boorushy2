@@ -183,6 +183,14 @@ app.post("/search",express.bodyParser(), function(req,res) {
         imageDB.imagesBy("tag",entry.key,function(images) { stack.push(handleQuery(entry,images,allImages)); next(); });
       } else if(entry.type == "string") {
         imageDB.imagesBy(entry.key,entry.value,function(images) { stack.push(handleQuery(entry,images,allImages)); next(); });
+      } else if(entry.type == "numeric") {
+        var pmin = 0, pmax = 2147483647, pin = parseInt(entry.value);
+        if(entry.sign == "eq") { pmin = pin; pmax = pin; }
+        else if(entry.sign == "lt") { pmax = pin-1; }
+        else if(entry.sign == "le") { pmax = pin; }
+        else if(entry.sign == "gt") { pmin = pin+1; }
+        else if(entry.sign == "ge") { pmin = pin; }
+        imageDB.imagesByNum(entry.key,pmin,pmax,function(images) { stack.push(images); next(); });
       } else if(entry.type == "linker" && stack.length >= 2) {
         var p1 = stack.pop()
           , p2 = stack.pop();
