@@ -4,8 +4,9 @@
 <br><br>
 </div>
 <div class="span6 offset3">
-<form method="post" action="/edit/<%= image.id %>/" id="edit-form" enctype="multipart/form-data">
+<form method="post" action="/edit" id="edit-form" enctype="multipart/form-data">
 <fieldset>
+<input type="hidden" name="id" value="<%= image.id %>">
 <legend>Edit</legend>
 <label>Name</label>
 <input type="text" name="name" value="<%= image.name %>">
