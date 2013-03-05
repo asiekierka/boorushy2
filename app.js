@@ -25,7 +25,7 @@ var app = express();
 var config = require('./config.json')
   , templates = {};
 
-var defaultConfig = { salt: "ICannotIntoSalts" }
+var defaultConfig = { salt: "ICannotIntoSalts", defaultUsers: {"admin": "admin"} }
   , defaultImage = { author: "Unknown", source: "/", uploader: "Computer"}
   , defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null, noAjaxLoad: false};
 
@@ -304,8 +304,11 @@ userDB.connect(client, config.salt);
 
 userDB.exists("admin", function(err, exists) {
   if(!err && !exists) {
-    console.log("Creating default admin user... [password: admin]");
-    userDB.addUser({user: "admin", pass: userDB.hash("admin"), nick: "admin", type: "admin"});
+    console.log("Creating default users...");
+    _.each(config.defaultUsers, function(value,key) {
+      console.log("[+] "+key);
+      userDB.addUser({user: key, pass: userDB.hash(value), nick: key, type: "admin"});
+    });
   }
   else if(err) { console.log("Error checking userDB! " + err.message); }
 });
