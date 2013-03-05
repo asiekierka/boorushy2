@@ -6,9 +6,7 @@ var ImageDB = {}
 
 var client = null;
 
-ImageDB.connect = function(port,host,options) {
-  client = redis.createClient(port || null, host || null, options || {});
-}
+ImageDB.connect = function(cli) { client = cli; }
 
 ImageDB.get = function(id,callback) {
   client.get("data:"+id,function(err,out) {
