@@ -13,7 +13,8 @@ var express = require('express')
   , argv = require('optimist').argv
   , bar = require('progress-bar')
   , async = require('async')
-  , redis = require('redis');
+  , redis = require('redis')
+  , queryparser = require('./queryparser.js').QueryParser;
 
 _.str = require('underscore.string');
 _.mixin(_.str.exports());
