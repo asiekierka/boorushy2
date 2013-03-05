@@ -52,7 +52,7 @@ QueryParser.parse = function(query) {
           r.type = type;
           if(type == "tag") {
             r.key = exec[2];
-            r.invert = (exec[2]=="!")?true:false;
+            r.invert = (exec[1]=="!")?true:false;
           } else {
             r.key = exec[1];
             if(exec.length>2) {
@@ -67,4 +67,4 @@ QueryParser.parse = function(query) {
   return result;
 };
 
-console.log(QueryParser.parse("tags and friendship or magic and width>1920 & author=brony"));
+console.log(QueryParser.parse("tags and friendship or !magic and width>1920 & author=brony"));
