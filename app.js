@@ -124,7 +124,7 @@ function restrictAdmin(req,res,next) {
   if(req.session.user && req.session.type == "admin") { next(); }
   else { req.session.error = "Access denied!"; res.send(403,"Access denied - log in."); }
 }
-function parse(req,res,next) { req.params = req.params[0].split("/"); next(); }
+function parse(req,res,next) { if(req.params[0]) req.params = req.params[0].split("/"); else req.params = [""]; next(); }
 function getImage(req,res,next) {
   imageDB.get(req.params.shift(),function(data) {
     if(data==null) { res.send(404,"Image not found!"); return; }
