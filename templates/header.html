@@ -3,7 +3,7 @@
 <h1><% if(_.isString(htmlTitle)) { print(htmlTitle); } else { print(title); } %></h1>
 <% if(_.isString(subtitle)){ print('<h4>'+subtitle+'</h4>'); } %>
 <% if(req) {
-  if(req.session.user) { print('Logged in as '+req.session.user+' | <a class="no-ajax" href="/logout">Logout</a>'); }
+  if(req.session && req.session.user) { print('Logged in as '+req.session.user+' | <a class="no-ajax" href="/logout">Logout</a>'); }
   else { print('<a class="no-ajax" href="/login">Login</a>'); }
   print('<br>');
 } %>
