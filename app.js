@@ -182,40 +182,48 @@ app.post("/search",express.bodyParser(), function(req,res) {
   var query = queryparser.parse(req.body.query);
   var stack = [];
   console.log(query);
-  imageDB.images(function(allImages) {
-    async.eachSeries(query, function(entry, next) {
-      if(entry.type == "tag") {
-        imageDB.imagesBy("tag",entry.key,function(images) { stack.push(handleQuery(entry,images,allImages)); next(); });
-      } else if(entry.type == "string") {
-        imageDB.imagesBy(entry.key,entry.value,function(images) { stack.push(handleQuery(entry,images,allImages)); next(); });
-      } else if(entry.type == "numeric") {
-        var pmin = 0, pmax = 2147483647, pin = parseInt(entry.value);
-        if(entry.sign == "eq") { pmin = pin; pmax = pin; }
-        else if(entry.sign == "lt") { pmax = pin-1; }
-        else if(entry.sign == "le") { pmax = pin; }
-        else if(entry.sign == "gt") { pmin = pin+1; }
-        else if(entry.sign == "ge") { pmin = pin; }
-        imageDB.imagesByNum(entry.key,pmin,pmax,function(images) { stack.push(images); next(); });
-      } else if(entry.type == "linker" && stack.length >= 2) {
-        var p1 = stack.pop()
-          , p2 = stack.pop();
-        if(entry.link == "or") stack.push(_.union(p1,p2));
-        else if(entry.link == "and") stack.push(_.intersection(p1,p2));
-        else if(entry.link == "xor") {
-          var p3 = [];
-          _.each(_.union(p1,p2),function(val) {
-            if(_.contains(p1,val) != _.contains(p2,val)) p3.push(val);
-          });
-          stack.push(p3);
-        }
-        next();
-      } else next();
-    }, function() {
-      // Done sorting!
-      if(stack.length > 1) { res.send(500,"Something quite bad happened! "+JSON.stringify(stack)); return; }
-      var result = stack.pop();
-      listImages(req,res,result,0,false,{noAjaxLoad: true, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
-    });
+  cacheDB.exists("search:"+req.body.query,function(err,exists) {
+    if(!exists)
+      imageDB.images(function(allImages) {
+        async.eachSeries(query, function(entry, next) {
+          if(entry.type == "tag") {
+            imageDB.imagesBy("tag",entry.key,function(images) { stack.push(handleQuery(entry,images,allImages)); next(); });
+          } else if(entry.type == "string") {
+            imageDB.imagesBy(entry.key,entry.value,function(images) { stack.push(handleQuery(entry,images,allImages)); next(); });
+          } else if(entry.type == "numeric") {
+            var pmin = 0, pmax = 2147483647, pin = parseInt(entry.value);
+            if(entry.sign == "eq") { pmin = pin; pmax = pin; }
+            else if(entry.sign == "lt") { pmax = pin-1; } else if(entry.sign == "le") { pmax = pin; }
+            else if(entry.sign == "gt") { pmin = pin+1; } else if(entry.sign == "ge") { pmin = pin; }
+            imageDB.imagesByNum(entry.key,pmin,pmax,function(images) { stack.push(images); next(); });
+          } else if(entry.type == "linker" && stack.length >= 2) {
+            var p1 = stack.pop()
+              , p2 = stack.pop();
+            if(entry.link == "or") stack.push(_.union(p1,p2));
+            else if(entry.link == "and") stack.push(_.intersection(p1,p2));
+            else if(entry.link == "xor") {
+              var p3 = [];
+              _.each(_.union(p1,p2),function(val) {
+                if(_.contains(p1,val) != _.contains(p2,val)) p3.push(val);
+              });
+              stack.push(p3);
+            }
+            next();
+          } else next();
+        }, function() {
+          // Done sorting!
+          if(stack.length > 1) { res.send(500,"Something quite bad happened! "+JSON.stringify(stack)); return; }
+          var result = stack.pop();
+          cacheDB.set("search:"+req.body.query,result,60,null);
+          listImages(req,res,result,0,false,{noAjaxLoad: true, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
+        });
+      });
+    else { // Found cached!
+      console.log("Loading from cache!");
+      cacheDB.get("search:"+req.body.query,function(err,result) {
+        listImages(req,res,result,0,false,{noAjaxLoad: true, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
+      });
+    }
   });
 });
 app.get("/logout", function(req,res) {
@@ -305,6 +313,7 @@ if(config.salt == defaultConfig.salt || config.salt.length < 16) {
 console.log("Connecting to database...")
 var client = redis.createClient();
 imageDB.connect(client);
+cacheDB.connect(client);
 userDB.connect(client, config.salt);
 
 userDB.exists("admin", function(err, exists) {
