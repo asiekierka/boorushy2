@@ -6,6 +6,7 @@ var express = require('express')
   , JSON = require('JSON2')
   , imageDB = require('./imagedb.js').ImageDB
   , userDB = require('./userdb.js').UserDB
+  , cacheDB = require('./cachedb.js').CacheDB
   , im = require('imagemagick')
   , path = require('path')
   , qs = require('querystring')
