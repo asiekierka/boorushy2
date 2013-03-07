@@ -92,16 +92,20 @@ function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
 
 // Templating
 function makeRawTemplate(name,conf,noHeader) {
-  var conf2 = _.defaults(conf,config,defaultSiteConfig);
-  var body = _.template(templates[name],conf2);
-  if(!noHeader)
-    body = _.template(templates["header"],conf2) + body;
-  return body;
+  try {
+    var conf2 = _.defaults(conf,config,defaultSiteConfig);
+    var body = _.template(templates[name],conf2);
+    if(!noHeader)
+      body = _.template(templates["header"],conf2) + body;
+    return body;
+  } catch(e) { return "Template error: " + e.message; }
 }
 function makeTemplate(name,conf,raw,noHeader) {
-  if(raw=="raw") return makeRawTemplate(name,conf,noHeader);
-  var conf2 = _.defaults(conf,config,defaultSiteConfig);
-  return _.template(templates["main"],_.defaults(conf2,{page: makeRawTemplate(name,conf,noHeader)}));
+  try {
+    if(raw=="raw") return makeRawTemplate(name,conf,noHeader);
+    var conf2 = _.defaults(conf,config,defaultSiteConfig);
+    return _.template(templates["main"],_.defaults(conf2,{page: makeRawTemplate(name,conf,noHeader)}));
+  } catch(e) { return "Template error: " + e.message; }
 }
 
 // Tagify string
@@ -331,3 +335,7 @@ if(argv.r || argv.regen) {
 }
 else start();
 
+process.on("uncaughtException", function(err) {
+  console.log("Uncaught exception! Please report to author");
+  console.log(err);
+});
