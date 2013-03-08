@@ -1,7 +1,9 @@
 <% _.each(images, function(img) {
   if(img == null) return;
   print('<li class="span4"><a href="/image/'+img.id+'/" class="thumbnail thumbnail-300">');
-  var imgloc = _(img.tags).contains("spoiler")?'/static/img/spoiler.png':'/img/thumb/'+img.filename;
+  var imgloc = _.some(spoilerTags,function(val) {
+    if(_(img.tags).contains(val)) return true;
+  })?'/static/img/spoiler.png':'/img/thumb/'+img.filename;
   print('<img src="'+imgloc+'" class="to-scriptize fade-img" title="'+img.name+'">');
   print('</a></li>');
 }); %>

@@ -27,7 +27,7 @@ var app = express();
 var config = require('./config.json')
   , templates = {};
 
-var defaultConfig = { salt: "ICannotIntoSalts", defaultUsers: {"admin": "admin"} }
+var defaultConfig = { salt: "ICannotIntoSalts", defaultUsers: {"admin": "admin"}, spoilerTags: ["spoiler"] }
   , defaultImage = { author: "Unknown", source: "/", uploader: "Computer"}
   , defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null, noAjaxLoad: false};
 
@@ -238,10 +238,10 @@ app.get("/edit/*", restrict, parse, getImage, function(req,res) {
 app.get("/image/*", parse, getImage, function(req,res) {
   res.send(makeTemplate("view",{image: _.defaults(req.image, defaultImage), req: req},req.params[0]));
 });
-function getHiddenImages(next) {
-  if(config.hiddenTags) {
+function getImagesTagged(tags,next) {
+  if(tags) {
     var imageList = [];
-    async.each(config.hiddenTags,function(tag,callback) {
+    async.each(tags,function(tag,callback) {
       imageDB.imagesBy("tag",tag, function(images) {
         imageList = _.union(imageList, images);
         callback();
@@ -255,7 +255,7 @@ function listImages(req,res,images1,p,p2,sub1,sub2,defConfig,maxVal) {
   var noHeader = false;
   var images1a;
   if(start < 0) { start = 0; isRaw = p; }
-  getHiddenImages(function(hiddenImages) {
+  getImagesTagged(config.hiddenTags,function(hiddenImages) {
     if(!_(req.cookies.showHidden).isUndefined()) images1a = images1;
     else images1a = _.difference(images1,hiddenImages);
     imageDB.range(images1a,start,maxVal || config.pageSize,function(images2) {
