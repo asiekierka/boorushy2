@@ -80,4 +80,4 @@ QueryParser.parse = function(query) {
 exports.QueryParser = QueryParser;
 
 // Test!
-console.log(QueryParser.parse("tags and friendship or !magic and width>1920 & author=brony"));
+// console.log(QueryParser.parse("tags and friendship or !magic and width>1920 & author=brony"));

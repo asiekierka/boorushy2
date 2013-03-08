@@ -12,7 +12,7 @@ exports.resize = function(src,dest,w,h,cb,grav) {
   var cnf = { srcPath: src, dstPath: dest,
               width: w, height: h+"^", quality: 0.9,
               customArgs: [ "-dispose", 2, "-coalesce", "-gravity", grav || "center", "-extent", w+"x"+h, "-layers", "OptimizePlus"] };
-  im.resize(_.defaults(cnf),cb);
+  im.resize(cnf,cb);
 }
 
 function copy(src,dest) {
@@ -48,13 +48,18 @@ exports.optimize = function(path,data) {
   });
 }
 
-exports.thumbnail = function(src,dest,dest2x,w,h,grav) {
+exports.thumbnail = function(src,dest,dest2x,w1,h1,grav) {
+  var w = w1 || thumbW*2
+    , h = h1 || thumbH*2;
   console.log("Thumbnailing " + src);
   t2 = function() {
     if(_.isString(dest2x) && (w>thumbW || h>thumbH))
-      this.resize(src,dest2x,thumbW*2,thumbH*2,null,grav);
+      this.resize(src,dest2x,thumbW*2,thumbH*2,function() {
+        this.optimize(dest,{format: fileExt(src)});
+        this.optimize(dest2x,{format: fileExt(src)});
+      },grav);
   };
-  if((thumbW<w || thumbH<h) && (w/h == thumbW/thumbH)) resize(src,dest,thumbW,thumbH,t2,grav);
+  if((thumbW<w || thumbH<h) && (w/h == thumbW/thumbH)) this.resize(src,dest,thumbW,thumbH,t2,grav);
   else { copy(src,dest); t2(); }
 }
 

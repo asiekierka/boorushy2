@@ -86,7 +86,6 @@ function makeTemplate(name,conf,raw,noHeader) {
 function tagArray(str) {
   var t = str.split(",");
   t = _.map(t,function(v){return v.trim();});
-  console.log(t);
   return t;
 }
 
@@ -196,7 +195,7 @@ app.post("/login", express.bodyParser(), function(req,res) {
     if(exists) {
       userDB.get(req.body.username, function(err, data) {
         if(data.pass == encPassword) {
-          req.session.regenerate(function() {
+            req.session.regenerate(function() {
             req.session.user = data.user;
             req.session.type = data.type;
             res.redirect("/");
@@ -221,7 +220,6 @@ app.get("/upload", restrict, parse, function(req,res,next) {
   res.send(makeTemplate("upload",{req: req, username: req.session.user},req.params[0]));
 });
 app.post("/edit", express.bodyParser(), restrict, getImagePost, function(req,res) {
-  console.log("/edit");
   var image = req.image;
   image.name = req.body.name || image.name;
   image.author = req.body.author || image.author;
@@ -229,7 +227,7 @@ app.post("/edit", express.bodyParser(), restrict, getImagePost, function(req,res
   image.thumbnailGravity = req.body.gravity || image.thumbnailGravity;
   image.tags = tagArray(req.body.tags_string) || image.tags || [];
   if(req.files && req.files.thumbnail)
-    imageHandler.thumbnail(req.files.thumbnail.path,"img/thumb/"+image.filename,"img/thumb2x/"+image.filename,thumbW*2,thumbH*2,image.thumbnailGravity,true);
+    imageHandler.thumbnail(req.files.thumbnail.path,"img/thumb/"+image.filename,"img/thumb2x/"+image.filename,null,null,image.thumbnailGravity,true);
   imageDB.set(image.id,image,function() {
     res.redirect("/");
   }, true);
@@ -240,21 +238,37 @@ app.get("/edit/*", restrict, parse, getImage, function(req,res) {
 app.get("/image/*", parse, getImage, function(req,res) {
   res.send(makeTemplate("view",{image: _.defaults(req.image, defaultImage), req: req},req.params[0]));
 });
+function getHiddenImages(next) {
+  if(config.hiddenTags) {
+    var imageList = [];
+    async.each(config.hiddenTags,function(tag,callback) {
+      imageDB.imagesBy("tag",tag, function(images) {
+        imageList = _.union(imageList, images);
+        callback();
+      });
+    }, function() { next(imageList); } );
+  } else next([]);
+}
 function listImages(req,res,images1,p,p2,sub1,sub2,defConfig,maxVal) {
   var start = parseInt(p) || -1;
   var isRaw = p2 || false;
   var noHeader = false;
+  var images1a;
   if(start < 0) { start = 0; isRaw = p; }
-  imageDB.range(images1,start,maxVal || config.pageSize,function(images2) {
-    var conf = _.defaults({images: images2, position: start, maxpos: images1.length, req: req}, defConfig || {});
-    if(_.isString(sub2))
-      conf.subtitle = _.capitalize(sub1)+": "+sub2;
-    else if(!conf.subtitle)
-      conf.subtitle = "Now with " + conf.maxpos + " images!";
-    var imagesLi = makeRawTemplate("images-li",conf,"raw",true);
-    conf.imagesLi = imagesLi;
-    if(isRaw == "append") res.send(conf.imagesLi);
-    else res.send(makeTemplate("images",conf,isRaw,noHeader));
+  getHiddenImages(function(hiddenImages) {
+    if(!_(req.cookies.showHidden).isUndefined()) images1a = images1;
+    else images1a = _.difference(images1,hiddenImages);
+    imageDB.range(images1a,start,maxVal || config.pageSize,function(images2) {
+      var conf = _.defaults({images: images2, position: start, maxpos: images1.length, req: req}, defConfig || {});
+      if(_.isString(sub2))
+        conf.subtitle = _.capitalize(sub1)+": "+sub2;
+      else if(!conf.subtitle)
+        conf.subtitle = "Now with " + conf.maxpos + " images!";
+      var imagesLi = makeRawTemplate("images-li",conf,"raw",true);
+      conf.imagesLi = imagesLi;
+      if(isRaw == "append") res.send(conf.imagesLi);
+      else res.send(makeTemplate("images",conf,isRaw,noHeader));
+    });
   });
 }
 app.get("/*",function(req,res) {

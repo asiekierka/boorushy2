@@ -14,5 +14,7 @@
      "enabled": false,
      "path": "/usr/bin/gifsicle --careful '$FILE' -o '$FILE'"}
   ],
-  "optimizationThreads": 3
+  "optimizationThreads": 3,
+  "spoilerTags": ["spoiler"],
+  "hiddenTags": ["hidden"]
 }
