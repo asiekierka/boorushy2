@@ -15,7 +15,8 @@ var express = require('express')
   , bar = require('progress-bar')
   , async = require('async')
   , redis = require('redis')
-  , queryparser = require('./queryparser.js').QueryParser;
+  , queryparser = require('./queryparser.js').QueryParser
+  , imageHandler = require('./image.js');
 
 _.str = require('underscore.string');
 _.mixin(_.str.exports());
@@ -38,35 +39,6 @@ _.each(fs.readdirSync("templates/"),function(filename) {
   templates[name] = fs.readFileSync("templates/"+filename,"utf8");    
 });
 
-// File/thumbnail
-function fileExt(name) {
-  var ext = path.extname(name).split(".");
-  return ext[ext.length-1];
-}
-
-var thumbW = 300, thumbH = 300;
-
-function resize(src,dest,w,h,cb,grav) {
-  var cnf = { srcPath: src, dstPath: dest,
-              width: w, height: h+"^", quality: 0.9,
-              customArgs: [ "-dispose", 2, "-coalesce", "-gravity", grav || "center", "-extent", w+"x"+h, "-layers", "OptimizePlus"] };
-  im.resize(_.defaults(cnf),cb);
-}
-
-function copy(src,dest) {
-  fs.createReadStream(src).pipe(fs.createWriteStream(dest));
-}
-
-function thumbnail(src,dest,dest2x,w,h,grav) {
-  console.log("thumbnail called");
-  t2 = function() {
-    if(_.isString(dest2x) && (w>thumbW || h>thumbH))
-      resize(src,dest2x,thumbW*2,thumbH*2,null,grav);
-  };
-  if(thumbW<w || thumbH<h) resize(src,dest,thumbW,thumbH,t2,grav);
-  else { copy(src,dest); t2(); }
-}
-
 // AddImage
 function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
   var hash = crypto.createHash('md5').update(rawdata).digest('hex');
@@ -82,7 +54,8 @@ function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
                        width: features.width, height: features.height, hash: hash, thumbnailGravity: grav || "center"};
           data = _.defaults(data,info);
           imageDB.set(id,_.defaults(data,defaultImage));
-          thumbnail(thumbnailsrc || ("img/src/"+path),"img/thumb/"+path,"img/thumb2x/"+path,thumbnailsrc?600:features.width,thumbnailsrc?600:features.height,grav);
+          imageHandler.thumbnail(thumbnailsrc || ("img/src/"+path),"img/thumb/"+path,"img/thumb2x/"+path,thumbnailsrc?600:features.width,thumbnailsrc?600:features.height,grav,true);
+          imageHandler.optimize("img/src/"+path,data);
           if(_.isFunction(callback)) callback();
         });
       });
@@ -145,19 +118,7 @@ function getImagePost(req,res,next) {
   });
 }
 
-// Create missing directories (just in case)
-mkdirp.sync("img/src");
-mkdirp.sync("img/thumb");
-mkdirp.sync("img/thumb2x");
-
-// Load directory dependencies
-app.use("/static/",express.compress());
-app.use("/static/",express.static("bootstrap"));
-app.use("/static/",express.static("static"));
-app.use("/img/",express.static("img"));
-app.use("/img/thumb2x/",express.static("img/thumb"));
-app.use("/img/thumb/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
-app.use("/img/thumb2x/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
+imageHandler.express(express,app);
 app.post("/upload/post",express.bodyParser());
 app.post("/upload/post", restrict, function(req,res) {
   if(!req.files || !req.files.image || !req.body.uploader || !req.body.author)
@@ -268,7 +229,7 @@ app.post("/edit", express.bodyParser(), restrict, getImagePost, function(req,res
   image.thumbnailGravity = req.body.gravity || image.thumbnailGravity;
   image.tags = tagArray(req.body.tags_string) || image.tags || [];
   if(req.files && req.files.thumbnail)
-    thumbnail(req.files.thumbnail.path,"img/thumb/"+image.filename,"img/thumb2x/"+image.filename,thumbW*2,thumbH*2,image.thumbnailGravity);
+    imageHandler.thumbnail(req.files.thumbnail.path,"img/thumb/"+image.filename,"img/thumb2x/"+image.filename,thumbW*2,thumbH*2,image.thumbnailGravity,true);
   imageDB.set(image.id,image,function() {
     res.redirect("/");
   }, true);
@@ -344,6 +305,19 @@ if(argv.r || argv.regen) {
   });
 }
 else start();
+
+if(argv.o || argv.opt) {
+  console.log("Optimization requested, optimizing all images...");
+  imageDB.images(function(images) {
+    imageDB.getArray(images, function(err,idata) {
+      _(idata).each(function(img) {
+        imageHandler.optimize("img/src/"+img.filename, img);
+        imageHandler.optimize("img/thumb/"+img.filename, img);
+        imageHandler.optimize("img/thumb2x/"+img.filename, img);
+      });
+    });
+  });
+}
 
 process.on("uncaughtException", function(err) {
   console.log("Uncaught exception! Please report to author");

@@ -50,12 +50,17 @@ ImageDB.imagesByNum = function(key,min,max,callback){
     else callback(_.sortBy(m,function(num){ return 0-num; }));
   });
 }
+
+ImageDB.getArray = function(arr,callback) {
+  async.map(arr, this.getWithError, callback);
+}
+
 ImageDB.range = function(arr2,s,l,callback) {
   var out = new Array();
   var arr = arr2;
   if(_.isNumber(arr2)) arr = new Array(arr2);
   arr = _.first(_.rest(arr,s),l);
-  async.map(arr,this.getWithError,function(err, results) {
+  this.getArray(arr,function(err, results) {
     if(err) throw err;
     callback(results);
   });
