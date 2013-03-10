@@ -65,19 +65,26 @@ QueryParser.parse = function(query) {
       });
     if(r != {}) result.push(r);
   });
-  var rpnResult = [], lStack = [], nums = 0;
+  var rpnStack = [], rpnResult = [], lStack = [], nums = 0;
   _.each(result, function(r) {
     if(r.type=="linker") lStack.push(r);
-    else { rpnResult.push(r); nums++; }
+    else { rpnStack.push(r); nums++; }
     if(nums == 2 && lStack.length>0) {
-      nums--; rpnResult.push(lStack.pop());
+      nums--; rpnStack.push(lStack.pop());
     }
   });
-  _.each(lStack, function(r) { rpnResult.push(r); });
+  _.each(lStack, function(r) { rpnStack.push(r); });
+  _.each(rpnStack, function(r) {
+    var last = rpnResult.length-1;
+    // join tag names
+    if(last>=0 && rpnResult[last].type == "tag" && r.type == "tag")
+      rpnResult[last].key = rpnResult[last].key + " " + (r.invert ? "!" : "") + r.key;
+    else rpnResult.push(r);
+  });
   return rpnResult;
 };
 
 exports.QueryParser = QueryParser;
 
 // Test!
-// console.log(QueryParser.parse("tags and friendship or !magic and width>1920 & author=brony"));
+//console.log(QueryParser.parse("big tags and friendship or !magic and width>1920 & author=brony"));
