@@ -21,11 +21,16 @@ var iw = <%= image.width %>
   , ih = <%= image.height %>
   , conth = 0;
 function doScale(obj,h) {
+  if(iw == 0) iw = $(this).width();
   ih = h;
+  var aspect = iw/ih;
   if(conth == 0) conth = $("#page-inject").height();
   var winh = $(window).height();
-  var th = Math.min(ih,winh - conth - 32);
-  obj.attr("style","width: auto; height: " + th + "px;");
+  var winw = $("#page-inject").width();
+  var th = Math.min(ih,Math.floor(winh - conth - 32))
+    , tw = th*iw/ih;
+  if(tw > winw * 0.9) { tw = winw * 0.9; th = tw*ih/iw; }
+  obj.attr("style","width: auto; height: " + th + "px; width: " + tw + "px; max-width: 100%;");
 }
 function resizer() {
   if(ih==0)
