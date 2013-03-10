@@ -13,6 +13,7 @@
     "async": ">=0.2.5",
     "underscore.string": "2.x",
     "optimist": "0.3.x",
-    "progress-bar": ">=0.1.1"
+    "progress-bar": ">=0.1.1",
+    "temporary": ">=0.0.5"
   }
 }

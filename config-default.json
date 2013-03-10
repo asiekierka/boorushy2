@@ -1,0 +1,27 @@
+{ "port": 8080, "pageSize": 15, "title": "Booru", "htmlTitle": "Booru",
+  "salt": "",
+  "defaultUsers": {
+    "admin": "admin"
+  },
+  "optimizationEngines": [
+    {"name": "pngout", "format": "png", "notes": "Likely the best option for PNG",
+     "enabled": false,
+     "path": "/usr/bin/pngout '$FILE'"},
+    {"name": "pngcrush", "format": "png",
+     "enabled": false,
+     "path": "/usr/bin/pngcrush '$FILE' '$FILE'"},
+    {"name": "jpegrescan", "format": "jpg", "notes": "Just install Perl and File::Slurp",
+     "enabled": false,
+     "path": "tools/jpegrescan '$FILE' '$FILE'"},
+    {"name": "gifsicle", "format": "gif",
+     "enabled": false,
+     "path": "/usr/bin/gifsicle --careful '$FILE' -o '$FILE'"}
+  ],
+  "optimizationThreads": 1,
+  "spoilerTags": ["spoiler"],
+  "hiddenTags": ["hidden"],
+  "useZepto": false,
+  "style": {
+    "bgcolor": "#fff"
+  }
+}

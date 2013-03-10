@@ -24,15 +24,16 @@ _.mixin(_.str.exports());
 
 var app = express();
 
-// Configure
-var config = require('./config.json')
-  , templates = {};
-
-var defaultConfig = { salt: "ICannotIntoSalts", defaultUsers: {"admin": "admin"}, spoilerTags: ["spoiler"], useZepto: false }
+var defaultConfig = require('./config-default.json')
   , defaultImage = { author: "Unknown", source: "/", uploader: "Computer"}
   , defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null, noAjaxLoad: false};
 
+// Configure
+var config = fs.existsSync("./config.json") ? require('./config.json') : defaultConfig
+  , templates = {};
+
 config = _.defaults(config,defaultConfig);
+if(!_(config).contains("htmlTitle")) config.htmlTitle = config.title;
 
 _.each(fs.readdirSync("templates/"),function(filename) {
   var name = filename.split(".")[0];
