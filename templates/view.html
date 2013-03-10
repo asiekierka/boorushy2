@@ -1,7 +1,7 @@
 <div class="row padded-row">
 <div class="span12" style="text-align: center;">
 <a href="/img/src/<%= image.filename %>" class="no-ajax">
-<img src="/img/src/<%= image.filename %>" style="max-width: 100%; height: auto;" class="img-polaroid to-resize">
+<img src="/img/src/<%= image.filename %>" style="display: none; max-width: 90%; height: auto;" class="img-polaroid to-resize">
 </a><br><br>
 <h3><%= image.name %></h3>
 Tags: <%
@@ -17,17 +17,25 @@ Uploaded by <a href="/uploader/<%= image.uploader %>/"><%= image.uploader %></a>
 <% if(req.session.user) print('[<a href="/edit/'+image.id+'/">edit</a>]'); %>
 </div>
 <script type="text/javascript">
-var iw = <%= image.width %>;
-var ih = <%= image.height %>;
+var iw = <%= image.width %>
+  , ih = <%= image.height %>
+  , conth = 0;
 function doScale(obj,h) {
-  if(h>($(window).height()*0.8))
-    obj.attr("style","width: auto; max-height: 80%;");
+  ih = h;
+  if(conth == 0) conth = $("#page-inject").height();
+  var winh = $(window).height();
+  var th = Math.min(ih,winh - conth - 32);
+  obj.attr("style","width: auto; height: " + th + "px;");
 }
-function pageLoad() {
+function resizer() {
   if(ih==0)
     $("img.to-resize").load(function(){doScale($(this),$(this).height());});
   else
     $("img.to-resize").each(function(idx){doScale($(this),ih);});
+}
+function pageLoad() {
+  $(window).resize(resizer);
+  resizer();
 }
 function pageUnload() { }
 </script>
