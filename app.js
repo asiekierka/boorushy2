@@ -48,16 +48,16 @@ function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
     if(!cont) imageDB.count("imageId",function(err,id) {
       var path = id+"."+format;
       console.log("Writing file " + id);
-      fs.writeFile("img/src/"+path,rawdata,"utf8",function() {
+      fs.writeFile("./img/src/"+path,rawdata,"utf8",function() {
         console.log("Identifying file " + id);
-        im.identify("img/src/"+path, function(err,features) {
+        im.identify("./img/src/"+path, function(err,features) {
           if(err) throw err;
           var data = { id: id, format: format, filename: path, originalFilename: info.filename,
                        width: features.width, height: features.height, hash: hash, thumbnailGravity: grav || "center"};
           data = _.defaults(data,info);
           imageDB.set(id,_.defaults(data,defaultImage));
-          imageHandler.thumbnail(thumbnailsrc || ("img/src/"+path),"img/thumb/"+path,"img/thumb2x/"+path,thumbnailsrc?600:features.width,thumbnailsrc?600:features.height,grav);
-          imageHandler.optimize("img/src/"+path,data);
+          imageHandler.thumbnail(thumbnailsrc || ("./img/src/"+path),"./img/thumb/"+path,"./img/thumb2x/"+path,thumbnailsrc?600:features.width,thumbnailsrc?600:features.height,grav);
+          imageHandler.optimize("./img/src/"+path,data);
           if(_.isFunction(callback)) callback();
         });
       });
@@ -227,7 +227,7 @@ app.get("/regenerate/*", restrictAdmin, parse, function(req,res) {
   console.log("Regenerating ID " + id);
   imageDB.regenerate(id,function(){
     imageDB.get(id,function(image) {
-      imageHandler.thumbnail("img/src/"+image.filename,"img/thumb/"+image.filename,"img/thumb2x/"+image.filename,null,null,image.thumbnailGravity);
+      imageHandler.thumbnail("./img/src/"+image.filename,"./img/thumb/"+image.filename,"./img/thumb2x/"+image.filename,null,null,image.thumbnailGravity);
       res.redirect("/");
     });
   });
@@ -243,7 +243,7 @@ app.post("/edit", express.bodyParser(), restrict, getImagePost, function(req,res
   image.thumbnailGravity = req.body.gravity || image.thumbnailGravity;
   image.tags = tagArray(req.body.tags_string) || image.tags || [];
   if(req.files && req.files.thumbnail)
-    imageHandler.thumbnail(req.files.thumbnail.path,"img/thumb/"+image.filename,"img/thumb2x/"+image.filename,null,null,image.thumbnailGravity);
+    imageHandler.thumbnail(req.files.thumbnail.path,"./img/thumb/"+image.filename,"./img/thumb2x/"+image.filename,null,null,image.thumbnailGravity);
   imageDB.set(image.id,image,function() {
     res.redirect("/");
   }, true);
@@ -345,9 +345,9 @@ if(argv.o || argv.opt) {
   imageDB.images(function(images) {
     imageDB.getArray(images, function(err,idata) {
       _(idata).each(function(img) {
-        imageHandler.optimize("img/src/"+img.filename, img);
-        imageHandler.optimize("img/thumb/"+img.filename, img);
-        imageHandler.optimize("img/thumb2x/"+img.filename, img);
+        imageHandler.optimize("./img/src/"+img.filename, img);
+        imageHandler.optimize("./img/thumb/"+img.filename, img);
+        imageHandler.optimize("./img/thumb2x/"+img.filename, img);
       });
     });
   });
@@ -357,7 +357,7 @@ if(argv.t || argv.thumb) {
   imageDB.images(function(images) {
     imageDB.getArray(images, function(err,idata) {
       async.eachLimit(idata,config.optimizationThreads || 1,function(image,next) {
-        imageHandler.thumbnail("img/src/"+image.filename,"img/thumb/"+image.filename,"img/thumb2x/"+image.filename,null,null,image.thumbnailGravity,next);
+        imageHandler.thumbnail("./img/src/"+image.filename,"./img/thumb/"+image.filename,"./img/thumb2x/"+image.filename,null,null,image.thumbnailGravity,next);
       });
     });
   });

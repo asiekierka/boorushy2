@@ -74,17 +74,17 @@ function fileExt(name) {
 }
 
 // Create missing directories (just in case)
-mkdirp.sync("img/src");
-mkdirp.sync("img/thumb");
-mkdirp.sync("img/thumb2x");
+mkdirp.sync("./img/src");
+mkdirp.sync("./img/thumb");
+mkdirp.sync("./img/thumb2x");
 
 exports.express = function(express,app) {
   console.log("[image.js] Installing Express hooks");
   app.use("/static/",express.compress());
-  app.use("/static/",express.static("bootstrap"));
-  app.use("/static/",express.static("static"));
-  app.use("/img/",express.static("img"));
-  app.use("/img/thumb2x/",express.static("img/thumb"));
+  app.use("/static/",express.static("./bootstrap"));
+  app.use("/static/",express.static("./static"));
+  app.use("/img/",express.static("./img"));
+  app.use("/img/thumb2x/",express.static("./img/thumb"));
   app.use("/img/thumb/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
   app.use("/img/thumb2x/", function(req,res) { res.redirect("/static/img/thumbnotfound.png"); });
 }
