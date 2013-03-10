@@ -16,7 +16,8 @@ var express = require('express')
   , async = require('async')
   , redis = require('redis')
   , queryparser = require('./queryparser.js').QueryParser
-  , imageHandler = require('./image.js');
+  , imageHandler = require('./image.js')
+  , tempurl = require('./tempurl.js');
 
 _.str = require('underscore.string');
 _.mixin(_.str.exports());
@@ -27,7 +28,7 @@ var app = express();
 var config = require('./config.json')
   , templates = {};
 
-var defaultConfig = { salt: "ICannotIntoSalts", defaultUsers: {"admin": "admin"}, spoilerTags: ["spoiler"] }
+var defaultConfig = { salt: "ICannotIntoSalts", defaultUsers: {"admin": "admin"}, spoilerTags: ["spoiler"], useZepto: false }
   , defaultImage = { author: "Unknown", source: "/", uploader: "Computer"}
   , defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null, noAjaxLoad: false};
 
@@ -54,7 +55,7 @@ function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
                        width: features.width, height: features.height, hash: hash, thumbnailGravity: grav || "center"};
           data = _.defaults(data,info);
           imageDB.set(id,_.defaults(data,defaultImage));
-          imageHandler.thumbnail(thumbnailsrc || ("img/src/"+path),"img/thumb/"+path,"img/thumb2x/"+path,thumbnailsrc?600:features.width,thumbnailsrc?600:features.height,grav,true);
+          imageHandler.thumbnail(thumbnailsrc || ("img/src/"+path),"img/thumb/"+path,"img/thumb2x/"+path,thumbnailsrc?600:features.width,thumbnailsrc?600:features.height,grav);
           imageHandler.optimize("img/src/"+path,data);
           if(_.isFunction(callback)) callback();
         });
@@ -116,19 +117,27 @@ function getImagePost(req,res,next) {
     next();
   });
 }
-
+// File/thumbnail
+function fileExt(name) {
+  var ext = path.extname(name).split(".");
+  return ext[ext.length-1];
+}
 imageHandler.express(express,app);
-app.post("/upload/post",express.bodyParser());
+app.post("/upload/post", express.bodyParser());
 app.post("/upload/post", restrict, function(req,res) {
-  if(!req.files || !req.files.image || !req.body.uploader || !req.body.author)
-    { res.send(500,"Invalid!"); return; }
+  var fn, thfn, path, ext;
+  if(!req.files || !req.files.image) {
+    if(!req.body.url) { res.send(500,"No file specified!"); return; }
+    ext = fileExt(req.body.url);
+    //tempurl.download(req.body.url, function(err, file, callback){
+    //});
+  } else { fn = req.files.image.name; path = req.files.image.path; ext = fileExt(fn); }
+  if(!req.body.uploader || !req.body.author)
+    { res.send(500,"Missing metadata!"); return; }
   var metadata = req.body;
   metadata.tags = tagArray(req.body.tags_string);
-  var fn = req.files.image.name;
-  var thfn = null;
-  if(req.files.thumbnail) thfn = req.files.thumbnail.path;
-  var ext = fileExt(fn);
-  fs.readFile(req.files.image.path, function(err, data) {
+  if(req.files && req.files.thumbnail) thfn = req.files.thumbnail.path;
+  fs.readFile(path, function(err, data) {
     if(err) throw err;
     addImage(data,ext,req.body,function(){ res.send("OK"); },thfn,req.body.gravity);
   });
@@ -213,11 +222,17 @@ app.get("/delete/*", restrictAdmin, parse, function(req,res) {
   imageDB.unset(req.params[0],function(){res.redirect("/");});
 });
 app.get("/regenerate/*", restrictAdmin, parse, function(req,res) {
-  console.log("Regenerating ID " + req.params[0]);
-  imageDB.regenerate(req.params[0],function(){res.redirect("/");});
+  var id = req.params[0];
+  console.log("Regenerating ID " + id);
+  imageDB.regenerate(id,function(){
+    imageDB.get(id,function(image) {
+      imageHandler.thumbnail("img/src/"+image.filename,"img/thumb/"+image.filename,"img/thumb2x/"+image.filename,null,null,image.thumbnailGravity);
+      res.redirect("/");
+    });
+  });
 });
 app.get("/upload", restrict, parse, function(req,res,next) {
-  res.send(makeTemplate("upload",{req: req, username: req.session.user},req.params[0]));
+  res.send(makeTemplate("upload",{req: req, username: req.session.user, useZepto: false},req.params[0]));
 });
 app.post("/edit", express.bodyParser(), restrict, getImagePost, function(req,res) {
   var image = req.image;
@@ -227,7 +242,7 @@ app.post("/edit", express.bodyParser(), restrict, getImagePost, function(req,res
   image.thumbnailGravity = req.body.gravity || image.thumbnailGravity;
   image.tags = tagArray(req.body.tags_string) || image.tags || [];
   if(req.files && req.files.thumbnail)
-    imageHandler.thumbnail(req.files.thumbnail.path,"img/thumb/"+image.filename,"img/thumb2x/"+image.filename,null,null,image.thumbnailGravity,true);
+    imageHandler.thumbnail(req.files.thumbnail.path,"img/thumb/"+image.filename,"img/thumb2x/"+image.filename,null,null,image.thumbnailGravity);
   imageDB.set(image.id,image,function() {
     res.redirect("/");
   }, true);
@@ -312,7 +327,11 @@ if(argv.r || argv.regen) {
   imageDB.images(function(images) {
     var bar = require('progress-bar').create(process.stdout,20);
     var i = 0;
-    async.eachSeries(images,function(image, callback) { imageDB.regenerate(image,function(){i+=1; bar.update(i/images.length); callback();}); },function(){
+    async.eachSeries(images,function(image, callback) {
+      imageDB.regenerate(image,function(){
+        i+=1; bar.update(i/images.length); callback();
+      });
+    },function(){
       console.log("\nDone!");
       start();
     });
@@ -332,8 +351,18 @@ if(argv.o || argv.opt) {
     });
   });
 }
+if(argv.t || argv.thumb) {
+  console.log("Thumbnailization requested, re-thumbnailing all images...");
+  imageDB.images(function(images) {
+    imageDB.getArray(images, function(err,idata) {
+      async.eachLimit(idata,config.optimizationThreads || 1,function(image,next) {
+        imageHandler.thumbnail("img/src/"+image.filename,"img/thumb/"+image.filename,"img/thumb2x/"+image.filename,null,null,image.thumbnailGravity,next);
+      });
+    });
+  });
+}
 
-process.on("uncaughtException", function(err) {
-  console.log("Uncaught exception! Please report to author");
-  console.log(err);
-});
+//process.on("uncaughtException", function(err) {
+//  console.log("Uncaught exception! Please report to author");
+//  console.log(err);
+//});

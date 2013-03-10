@@ -22,7 +22,10 @@ h1 {
 </style>
 </head>
 <body>
-<script src="/static/js/jquery-1.9.1.min.js"></script>
+<script src="<%
+  if(useZepto) print("/static/js/zepto.min.js");
+  else print("/static/js/jquery-1.9.1.min.js");
+%>"></script>
 <script src="/static/js/bootstrap.min.js"></script>
 <script src="/static/js/underscore-min.js"></script>
 <div class="container" id="page-inject"><%= page %></div>

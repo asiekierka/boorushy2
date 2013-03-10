@@ -4,7 +4,8 @@ var _ = require('underscore')
   , im = require('imagemagick')
   , config = require('./config.json')
   , child = require('child_process')
-  , async = require('async');
+  , async = require('async')
+  , path = require('path');
 
 var thumbW = 300, thumbH = 300;
 
@@ -48,19 +49,22 @@ exports.optimize = function(path,data) {
   });
 }
 
-exports.thumbnail = function(src,dest,dest2x,w1,h1,grav) {
+exports.thumbnail = function(src,dest,dest2x,w1,h1,grav,cb) {
   var w = w1 || thumbW*2
-    , h = h1 || thumbH*2;
+    , h = h1 || thumbH*2
+    , self = this;
   console.log("Thumbnailing " + src);
   t2 = function() {
     if(_.isString(dest2x) && (w>thumbW || h>thumbH))
-      this.resize(src,dest2x,thumbW*2,thumbH*2,function() {
-        this.optimize(dest,{format: fileExt(src)});
-        this.optimize(dest2x,{format: fileExt(src)});
+      self.resize(src,dest2x,thumbW*2,thumbH*2,function() {
+        self.optimize(dest,{format: fileExt(src)});
+        self.optimize(dest2x,{format: fileExt(src)});
+	console.log("Done!");
+        cb();
       },grav);
+    else cb();
   };
-  if((thumbW<w || thumbH<h) && (w/h == thumbW/thumbH)) this.resize(src,dest,thumbW,thumbH,t2,grav);
-  else { copy(src,dest); t2(); }
+  this.resize(src,dest,thumbW,thumbH,t2,grav);
 }
 
 // File/thumbnail

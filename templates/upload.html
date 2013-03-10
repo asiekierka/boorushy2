@@ -20,10 +20,10 @@
   <option>South</option>
 </select>
 <label>Tags [comma separated]</label>
-<input type="text" name="tags_string" id="input-tags">
-<label>File</label>
-<input type="file" name="image" id="input-image">
-<button type="submit" class="btn" id="button-add">Add</button>
+<input type="text" name="tags_string" id="input-tags"><br>
+File: <input type="file" name="image" id="input-image">
+<!--<br>or URL: <input type="text" name="url" id="input-url" style="width: 180px;">-->
+<button type="submit" class="btn" id="button-add">Submit</button>
 <br><br>
 <label>Custom thumbnail (600x600) [optional]</label>
 <input type="file" name="thumbnail" id="input-thumbnail">
@@ -38,18 +38,19 @@
 var files = [];
 
 function pageLoad(){
-  $('#upload-form').submit(function() {
+  $('#upload-form').submit(function(e) {
+    e.preventDefault();
     var pid = _.uniqueId("file-list_");
-    $('#file-list').append("<p id='" + pid + "'>" + $('#input-image').val() + '</p>');
+    $('#file-list').append("<p id='" + pid + "'>" + ($('#input-image').val() || $('#input-url').val()) + '</p>');
     $(this).ajaxSubmit(function() {
       $('#'+pid).append(" <b>[OK]</b>");      
     });
     return false;
   });
-  $('#input-image').change(function(e){
+  $('#input-image, #input-url').change(function(e){
     var fn = $(this).val();
     console.log(fn);
-    var patt = /([a-z0-9_]+)_by_([a-z0-9_]+)-([a-z0-9]{7,})\.([a-z]{3,4})/;
+    var patt = /([a-z0-9_]+)_by_([a-z0-9_]+)-([a-z0-9]{7,})\.([a-z]{3,4})$/;
     var test = fn.match(patt);
     console.log(test);
     if(_.isArray(test) && test.length == 5) { // deviantART
