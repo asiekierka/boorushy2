@@ -33,8 +33,10 @@ var config = fs.existsSync("./config.json") ? require('./config.json') : default
   , templates = {};
 
 config = _.defaults(config,defaultConfig);
-if(!_(config).contains("htmlTitle")) config.htmlTitle = config.title;
-
+if(!_(config).contains("htmlTitle")) {
+  if(_(config).contains("logo")) config.htmlTitle = "<img src='/" + config.logo + "' style='height: auto; width: 300px;'></img>";
+  else config.htmlTitle = config.title;
+}
 _.each(fs.readdirSync("templates/"),function(filename) {
   var name = filename.split(".")[0];
   console.log("[Template] Loading template "+name);
@@ -64,18 +66,6 @@ function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
     });  
     else if(_.isFunction(callback)) callback(new Error("File already exists!"));
   });
-}
-
-function cacheCheck(req,res,next) {
-  cacheDB.get("page:"+req.url,function(err, data) {
-    if(err || !_(data).isString()) next();
-    else res.send(data);
-  });
-}
-
-function cache(req, res, data, ttl) {
-  cacheDB.set("page:"+req.url,data,ttl);
-  res.send(data);
 }
 
 // Templating
@@ -160,7 +150,7 @@ function handleQuery(entry,images,allImages) {
   if(entry.invert) return _(allImages).without(images);
   return images;
 }
-app.post("/search",express.bodyParser(), cacheCheck, function(req,res) {
+app.post("/search",express.bodyParser(), function(req,res) {
   var query = queryparser.parse(req.body.query);
   var stack = [];
   console.log(query);
@@ -263,8 +253,8 @@ app.post("/edit", express.bodyParser(), restrict, getImagePost, function(req,res
 app.get("/edit/*", restrict, parse, getImage, function(req,res) {
   res.send(makeTemplate("edit",{image: _.defaults(req.image, defaultImage), req: req},req.params[0]));
 });
-app.get("/image/*", parse, getImage, cacheCheck, function(req,res) {
-  cache(req,res,makeTemplate("view",{image: _.defaults(req.image, defaultImage), req: req},req.params[0]),30);
+app.get("/image/*", parse, getImage, function(req,res) {
+  res.send(makeTemplate("view",{image: _.defaults(req.image, defaultImage), req: req},req.params[0]));
 });
 function getImagesTagged(tags,next) {
   if(tags) {
@@ -296,7 +286,7 @@ function listImages(req,res,images1,p,p2,sub1,sub2,defConfig,maxVal) {
       conf.imagesLi = imagesLi;
       if(isRaw == "append") data = conf.imagesLi;
       else data = makeTemplate("images",conf,isRaw,noHeader);
-      cache(req,res,data,15);
+      res.send(data);
     });
   });
 }
@@ -304,7 +294,7 @@ app.get("/mu-d6235ad9-7bb860d1-37dcb55d-226ee30b",function(req,res) {
   res.send("42");
 });
 
-app.get("/*", cacheCheck, function(req,res) {
+app.get("/*", function(req,res) {
   var p = qs.unescape(req.path).split("/");
   console.log("Request: " + JSON.stringify(p)); 
   if(p.length>2 && (p[1] == "tag" || p[1] == "author" || p[1] == "uploader")) imageDB.imagesBy(p[1],p[2],function(images) { listImages(req,res,images,p[3],p[4],p[1],p[2]); });
