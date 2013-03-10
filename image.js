@@ -60,9 +60,9 @@ exports.thumbnail = function(src,dest,dest2x,w1,h1,grav,cb) {
         self.optimize(dest,{format: fileExt(src)});
         self.optimize(dest2x,{format: fileExt(src)});
 	console.log("Done!");
-        cb();
+        if(_.isFunction(cb)) cb();
       },grav);
-    else cb();
+    else if(_.isFunction(cb)) cb();
   };
   this.resize(src,dest,thumbW,thumbH,t2,grav);
 }
