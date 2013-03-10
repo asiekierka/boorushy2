@@ -1,7 +1,6 @@
 var http = require('http')
   , fs = require('fs')
   , _ = require('underscore')
-  , temp = require('temp')
   , path = require('path')
   , os = require('os');
 
