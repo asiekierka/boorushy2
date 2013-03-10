@@ -125,25 +125,30 @@ function fileExt(name) {
   var ext = path.extname(name).split(".");
   return ext[ext.length-1];
 }
+function finishUpload(res,fn,thfn,path,metadata, next) {
+  var ext = fileExt(fn);
+  fs.readFile(path, function(err, data) {
+    if(err) throw err;
+    addImage(data,ext,metadata,function(){ res.send("OK"); if(_.isFunction(next)) next(); },thfn,metadata.gravity);
+  });
+}
 imageHandler.express(express,app);
 app.post("/upload/post", express.bodyParser());
 app.post("/upload/post", restrict, function(req,res) {
-  var fn, thfn, path, ext;
-  if(!req.files || !req.files.image) {
-    if(!req.body.url) { res.send(500,"No file specified!"); return; }
-    ext = fileExt(req.body.url);
-    //tempurl.download(req.body.url, function(err, file, callback){
-    //});
-  } else { fn = req.files.image.name; path = req.files.image.path; ext = fileExt(fn); }
+  var thumbnailFilename;
   if(!req.body.uploader || !req.body.author)
     { res.send(500,"Missing metadata!"); return; }
   var metadata = req.body;
   metadata.tags = tagArray(req.body.tags_string);
-  if(req.files && req.files.thumbnail) thfn = req.files.thumbnail.path;
-  fs.readFile(path, function(err, data) {
-    if(err) throw err;
-    addImage(data,ext,req.body,function(){ res.send("OK"); },thfn,req.body.gravity);
-  });
+  if(req.files && req.files.thumbnail) thumbnailFilename = req.files.thumbnail.path;
+  if(!req.files || !req.files.image) {
+    if(!req.body.url) { res.send(500,"No file specified!"); return; }
+    ext = fileExt(req.body.url);
+    tempurl.download(req.body.url, function(err, tmpfile, callback){
+      if(err) { res.send(500,"Download error!"); return; }
+      finishUpload(res, "file."+fileExt(tmpfile), thumbnailFilename, tmpfile, metadata, callback);
+    });
+  } else { finishUpload(res, req.files.image.name, thumbnailFilename, req.files.image.path, metadata); }
 });
 
 function handleQuery(entry,images,allImages) {
