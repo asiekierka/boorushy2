@@ -362,7 +362,7 @@ if(argv.t || argv.thumb) {
   });
 }
 
-//process.on("uncaughtException", function(err) {
-//  console.log("Uncaught exception! Please report to author");
-//  console.log(err);
-//});
+process.on("uncaughtException", function(err) {
+  console.log("Uncaught exception! Please report to author");
+  console.log(err);
+});
