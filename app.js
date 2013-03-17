@@ -152,7 +152,9 @@ app.post("/upload/post", restrict, function(req,res) {
 });
 
 function handleQuery(entry,images,allImages) {
-  if(entry.invert) return _(allImages).without(images);
+  if(entry.invert) return _(allImages).filter(function(val) {
+    return !_(images).contains(val);
+  });
   return images;
 }
 app.post("/search",express.bodyParser(), function(req,res) {
@@ -375,7 +377,7 @@ if(argv.t || argv.thumb) {
   });
 }
 
-//process.on("uncaughtException", function(err) {
-//  console.log("Uncaught exception! Please report to author");
-//  console.log(err);
-//});
+process.on("uncaughtException", function(err) {
+  console.log("Uncaught exception! Please report to author");
+  console.log(err);
+});

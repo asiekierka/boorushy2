@@ -18,15 +18,15 @@ exports.download = function(url, callback) {
   console.log("Downloading " + url + " to " + tmpfn);
   var stream = fs.createWriteStream(tmpfn);
   var req = http.get(url, function(response) {
-    response.on("data", function(chunk){stream.write(chunk);});
+    response.pipe(stream);
     response.on("end", function() {
+      stream.end();
+      stream.destroy();
       stream.on("close", function() {
         callback(null,tmpfn, function() {
           fs.unlinkSync(tmpfn);
         });
       });
-      stream.end();
-      stream.destroy();
     });
   });
 }
