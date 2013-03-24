@@ -59,7 +59,7 @@ function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
           data = _.defaults(data,info);
           imageDB.set(id,_.defaults(data,defaultImage));
           imageHandler.thumbnail(thumbnailsrc || ("./img/src/"+path),"./img/thumb/"+path,"./img/thumb2x/"+path,thumbnailsrc?600:features.width,thumbnailsrc?600:features.height,grav);
-          imageHandler.optimize("./img/src/"+path,data);
+          if(config.optimize == "all") imageHandler.optimize("./img/src/"+path,data);
           if(_.isFunction(callback)) callback();
         });
       });
@@ -320,6 +320,7 @@ var client = redis.createClient();
 imageDB.connect(client);
 cacheDB.connect(client);
 userDB.connect(client, config.salt);
+imageHandler.setMode(config.optimize);
 
 userDB.exists("admin", function(err, exists) {
   if(!err && !exists) {

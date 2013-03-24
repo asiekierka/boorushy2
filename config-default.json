@@ -18,6 +18,7 @@
      "path": "/usr/bin/gifsicle --careful '$FILE' -o '$FILE'"}
   ],
   "optimizationThreads": 1,
+  "optimize": "all",
   "spoilerTags": ["spoiler"],
   "hiddenTags": ["hidden"],
   "useZepto": false,

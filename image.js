@@ -9,6 +9,9 @@ var _ = require('underscore')
 
 var thumbW = 300, thumbH = 300;
 
+var optimizeMode = "all";
+exports.setMode = function(mode) { optimizeMode = mode; }
+
 exports.resize = function(src,dest,w,h,cb,grav) {
   var cnf = { srcPath: src, dstPath: dest,
               width: w, height: h+"^", quality: 0.9,
@@ -40,7 +43,7 @@ var optqueue = async.queue(function (task, callback) {
 }, config.optimizationThreads || 1);
 
 exports.optimize = function(path,data) {
-  if(!fs.existsSync(path)) return;
+  if(optimizeMode == "none" || !fs.existsSync(path)) return;
   var oldfilesize = filesize(path);
   var format = (data.format || fileExt(path)).toLowerCase();
   if(format=="jpeg") format="jpg";
@@ -57,8 +60,10 @@ exports.thumbnail = function(src,dest,dest2x,w1,h1,grav,cb) {
   t2 = function() {
     if(_.isString(dest2x) && (w>thumbW || h>thumbH))
       self.resize(src,dest2x,thumbW*2,thumbH*2,function() {
-        self.optimize(dest,{format: fileExt(src)});
-        self.optimize(dest2x,{format: fileExt(src)});
+        if(optimizeMode == "all" || optimizeMode == "thumbs" || optimizeMode == "thumbnails") {
+          self.optimize(dest,{format: fileExt(src)});
+          self.optimize(dest2x,{format: fileExt(src)});
+        }
 	console.log("Done!");
         if(_.isFunction(cb)) cb();
       },grav);
