@@ -136,7 +136,7 @@ imageHandler.express(express,app);
 app.post("/upload/post", express.bodyParser());
 app.post("/upload/post", restrict, function(req,res) {
   var thumbnailFilename;
-  if(!req.body.uploader || !req.body.author)
+  if(!req.body.uploader)
     { res.send(500,"Missing metadata!"); return; }
   var metadata = req.body;
   metadata.tags = tagArray(req.body.tags_string);
