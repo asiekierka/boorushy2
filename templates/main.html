@@ -42,8 +42,8 @@ function fixURLs() {
 }
 function redirect(url,noPush) {
   console.log("Redirecting to " + url);
-  var url2 = url + "raw/";
-  if(url.substr(url.length-1,1)!="/") url2 = url + "/raw/";
+  var url2 = url + "?mode=raw";
+  if(url.substr(url.length-1,1)!="/") url2 = url + "?mode=raw";
   $.get(url2, function(data) {
     history.replaceState({currentUrl: location.pathname}, "", location.pathname);
     if(!noPush) history.pushState({currentUrl: url}, "", url);

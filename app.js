@@ -194,13 +194,13 @@ app.post("/search",express.bodyParser(), function(req,res) {
           if(stack.length > 1) { res.send(500,"Something quite bad happened! "+JSON.stringify(stack)); return; }
           var result = stack.pop();
           cacheDB.set("search:"+req.body.query,result,60,null);
-          listImages(req,res,result,0,false,{noAjaxLoad: true, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
+          listImages(req,res,result,req.query,{noAjaxLoad: true, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
         });
       });
     else { // Found cached!
       console.log("Loading from cache!");
       cacheDB.get("search:"+req.body.query,function(err,result) {
-        listImages(req,res,result,0,false,{noAjaxLoad: true, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
+        listImages(req,res,result,req.query,{noAjaxLoad: true, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
       });
     }
   });
@@ -274,20 +274,19 @@ function getImagesTagged(tags,next) {
     }, function() { next(imageList); } );
   } else next([]);
 }
-function listImages(req,res,images1,p,p2,sub1,sub2,defConfig,maxVal) {
-  var start = parseInt(p) || -1;
-  var isRaw = p2 || false;
+function listImages(req,res,images1,options,defConfig,maxVal) {
+  var start = options["start"] || 0;
+  var isRaw = options["mode"] || "";
   var noHeader = false;
   var images1a, data;
-  if(start < 0) { start = 0; isRaw = p; }
   getImagesTagged(config.hiddenTags,function(hiddenImages) {
     if(!_(req.cookies.showHidden).isUndefined()) images1a = images1;
     else images1a = _.difference(images1,hiddenImages);
     imageDB.range(images1a,start,maxVal || config.pageSize,function(images2) {
       var conf = _.defaults({images: images2, position: start, maxpos: images1.length, req: req}, defConfig || {});
-      if(_.isString(sub2))
-        conf.subtitle = _.capitalize(sub1)+": "+sub2;
-      else if(!conf.subtitle)
+      if(_(options).has("subtitle2"))
+        conf.subtitle = _.capitalize(options["subtitle1"])+": "+options["subtitle2"];
+      else if(!_.isString(conf.subtitle))
         conf.subtitle = "Now with " + conf.maxpos + " images!";
       var imagesLi = makeRawTemplate("images-li",conf,"raw",true);
       conf.imagesLi = imagesLi;
@@ -304,8 +303,10 @@ app.get("/mu-d6235ad9-7bb860d1-37dcb55d-226ee30b",function(req,res) {
 app.get("/*", function(req,res) {
   var p = qs.unescape(req.path).split("/");
   console.log("Request: " + JSON.stringify(p)); 
-  if(p.length>2 && (p[1] == "tag" || p[1] == "author" || p[1] == "uploader")) imageDB.imagesBy(p[1],p[2],function(images) { listImages(req,res,images,p[3],p[4],p[1],p[2]); });
-  else imageDB.images(function(images) { listImages(req,res,images,p[1],p[2]); });
+  if(p.length>0 && (p[1] == "tag" || p[1] == "author" || p[1] == "uploader")) imageDB.imagesBy(p[1],p[2],function(images) {
+    listImages(req,res,images,_(req.query).extend({"subtitle1": p[1], "subtitle2": p[2]}));
+  });
+  else imageDB.images(function(images) { listImages(req,res,images,req.query); });
 });
 
 // Config validation

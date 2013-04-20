@@ -31,7 +31,7 @@ function pageLoad() {
     if(position+pageSize < maxpos && $(window).scrollTop() >= ($(document).height() - $(window).height() - 300)) {
       isUpdating = true;
       position = position + pageSize;
-      $.get(position + "/append/",function(data) {
+      $.get("?mode=append&start="+position,function(data) {
         $("ul.thumbnails").append(data);
         scriptize();
         setTimeout(update,50); // In case of huge scrollings
