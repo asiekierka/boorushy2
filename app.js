@@ -157,11 +157,9 @@ function handleQuery(entry,images,allImages) {
   });
   return images;
 }
-app.post("/search",express.bodyParser(), function(req,res) {
-  var query = queryparser.parse(req.body.query);
+function handleSearch(req, res, query) {
   var stack = [];
-  console.log(query);
-  cacheDB.exists("search:"+req.body.query,function(err,exists) {
+  cacheDB.exists("search:"+query,function(err,exists) {
     if(!exists)
       imageDB.images(function(allImages) {
         async.eachSeries(query, function(entry, next) {
@@ -193,17 +191,27 @@ app.post("/search",express.bodyParser(), function(req,res) {
           // Done sorting!
           if(stack.length > 1) { res.send(500,"Something quite bad happened! "+JSON.stringify(stack)); return; }
           var result = stack.pop();
-          cacheDB.set("search:"+req.body.query,result,60,null);
+          cacheDB.set("search:"+query,result,60,null);
           listImages(req,res,result,req.query,{noAjaxLoad: true, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
         });
       });
     else { // Found cached!
       console.log("Loading from cache!");
-      cacheDB.get("search:"+req.body.query,function(err,result) {
+      cacheDB.get("search:"+query,function(err,result) {
         listImages(req,res,result,req.query,{noAjaxLoad: true, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
       });
     }
   });
+}
+app.post("/search",express.bodyParser(), function(req,res) {
+  var query = queryparser.parse(req.body.query);
+  console.log(query);
+  handleSearch(req, res, query);
+});
+app.get("/search",express.bodyParser(), function(req,res) {
+  var query = queryparser.parse(req.query["q"] || req.query["query"]);
+  console.log(query);
+  handleSearch(req, res, query);
 });
 app.get("/logout", function(req,res) {
   req.session.destroy(function(){ res.redirect("/"); });
@@ -261,7 +269,9 @@ app.get("/edit/*", restrict, parse, getImage, function(req,res) {
   res.send(makeTemplate("edit",{image: _.defaults(req.image, defaultImage), req: req},req.params[0]));
 });
 app.get("/image/*", parse, getImage, function(req,res) {
-  res.send(makeTemplate("view",{image: _.defaults(req.image, defaultImage), req: req},req.params[0]));
+  if(req.query["mode"] == "json") {
+    res.json(req.image);
+  } else res.send(makeTemplate("view",{image: _.defaults(req.image, defaultImage), req: req},req.params[0]));
 });
 function getImagesTagged(tags,next) {
   if(tags) {
@@ -274,25 +284,33 @@ function getImagesTagged(tags,next) {
     }, function() { next(imageList); } );
   } else next([]);
 }
+
 function listImages(req,res,images1,options,defConfig,maxVal) {
   var start = options["start"] || 0;
-  var isRaw = options["mode"] || "";
+  var mode = options["mode"] || "";
   var noHeader = false;
   var images1a, data;
+  var maxValue = options["length"] || maxVal || config.pageSize;
+  if(maxValue > config.maxPageSize) maxValue = config.maxPageSize;
   getImagesTagged(config.hiddenTags,function(hiddenImages) {
     if(!_(req.cookies.showHidden).isUndefined()) images1a = images1;
     else images1a = _.difference(images1,hiddenImages);
-    imageDB.range(images1a,start,maxVal || config.pageSize,function(images2) {
+    imageDB.range(images1a,start,maxValue,function(images2) {
       var conf = _.defaults({images: images2, position: start, maxpos: images1.length, req: req}, defConfig || {});
-      if(_(options).has("subtitle2"))
-        conf.subtitle = _.capitalize(options["subtitle1"])+": "+options["subtitle2"];
-      else if(!_.isString(conf.subtitle))
-        conf.subtitle = "Now with " + conf.maxpos + " images!";
-      var imagesLi = makeRawTemplate("images-li",conf,"raw",true);
-      conf.imagesLi = imagesLi;
-      if(isRaw == "append") data = conf.imagesLi;
-      else data = makeTemplate("images",conf,isRaw,noHeader);
-      res.send(data);
+      if(mode=="json") {
+        if(config.allowJson == false) { res.send(403); return; }
+        res.json({position: start, length: images2.length, results: images2});
+      } else {
+        if(_(options).has("subtitle2"))
+          conf.subtitle = _.capitalize(options["subtitle1"])+": "+options["subtitle2"];
+        else if(!_.isString(conf.subtitle))
+          conf.subtitle = "Now with " + conf.maxpos + " images!";        
+        var imagesLi = makeRawTemplate("images-li",conf,"raw",true);
+        conf.imagesLi = imagesLi;
+        if(mode == "append") data = conf.imagesLi;
+        else data = makeTemplate("images",conf,mode,noHeader);
+        res.send(data);
+      }
     });
   });
 }

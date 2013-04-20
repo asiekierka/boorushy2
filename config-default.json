@@ -1,4 +1,5 @@
-{ "port": 8080, "pageSize": 15, "title": "Booru", "htmlTitle": "Booru",
+{ "port": 8080, "pageSize": 15, "maxPageSize": 500, "title": "Booru", "htmlTitle": "Booru",
+  "allowJson": true,
   "salt": "",
   "defaultUsers": {
     "admin": "admin"
