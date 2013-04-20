@@ -108,7 +108,12 @@ function restrictAdmin(req,res,next) {
 function parse(req,res,next) { if(req.params[0]) req.params = req.params[0].split("/"); else req.params = [""]; next(); }
 function getImage(req,res,next) {
   imageDB.get(req.params.shift(),function(data) {
-    if(data==null) { res.send(404,"Image not found!"); return; }
+    if(data==null) { if(req.query["mode"] == "json") {
+        res.json({error: "Image not found!", errorCode: 404}); return;
+      } else {
+        res.send(404,"Image not found!"); return;
+      }
+    }
     req.image = data;
     next();
   });
