@@ -291,7 +291,7 @@ function getImagesTagged(tags,next) {
 }
 
 function listImages(req,res,images1,options,defConfig,maxVal) {
-  var start = options["start"] || 0;
+  var start = parseInt(options["start"]) || 0;
   var mode = options["mode"] || "";
   var noHeader = false;
   var images1a, data;
@@ -301,15 +301,20 @@ function listImages(req,res,images1,options,defConfig,maxVal) {
     if(!_(req.cookies.showHidden).isUndefined() || req.query["hidden"] == true) images1a = images1;
     else images1a = _.difference(images1,hiddenImages);
     imageDB.range(images1a,start,maxValue,function(images2) {
-      var conf = _.defaults({images: images2, position: start, maxpos: images1.length, req: req}, defConfig || {});
+      var conf = _.defaults({images: images2, position: start, maxpos: images1.length, req: req}, defConfig || {isSearch: false});
       if(mode=="json") {
         if(config.allowJson == false) { res.send(403); return; }
         res.json({position: start, length: images2.length, results: images2});
       } else {
         if(_(options).has("subtitle2"))
           conf.subtitle = _.capitalize(options["subtitle1"])+": "+options["subtitle2"];
-        else if(!_.isString(conf.subtitle))
-          conf.subtitle = "Now with " + conf.maxpos + " images!";        
+        else if(!_.isString(conf.subtitle)) { // Create custom subtitle
+          if(start > 0 && (start % config.pageSize) == 0) { // page 2+
+            conf.subtitle = "Page " + ((start / config.pageSize)+1);
+          } else { // page 1
+            conf.subtitle = "Now with " + conf.maxpos + " images!";        
+          }
+        }
         var imagesLi = makeRawTemplate("images-li",conf,"raw",true);
         conf.imagesLi = imagesLi;
         if(mode == "append") data = conf.imagesLi;

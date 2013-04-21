@@ -10,6 +10,18 @@
 <ul class="thumbnails">
 <%= imagesLi %>
 </ul>
+</div>
+<%
+  if(!isSearch) { // Graceful NoScript fallback
+    print('<noscript><div class="row"><div class="span12" style="text-align: center; font-size: 18px; padding-bottom: 32px;">');
+    if(position > 0) print('<a href="?start='+(position-images.length)+'">Newer</a>');
+    if(position < (maxpos - images.length)) {
+      if(position > 0) print(' | ');
+      print('<a href="?start='+(position+images.length)+'">Older</a>');
+    }
+    print('</div></div></noscript>');
+  }
+%>
 <script type="text/javascript">
 function scriptize() {
 <%
@@ -62,4 +74,3 @@ function pageUnload() {
   
 }
 </script>
-</div>
