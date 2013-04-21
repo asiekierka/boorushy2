@@ -1,0 +1,12 @@
+@media handheld {
+  /* Mobile hacks */
+  .span12, .container {
+    text-align: center;
+    width: 350px;
+  }
+  ul.thumbnails {
+    margin: 0px;
+    margin-left: 10px;
+    padding: 0;
+  }
+}
