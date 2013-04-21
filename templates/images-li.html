@@ -4,6 +4,14 @@
   var imgloc = _.some(spoilerTags,function(val) {
     if(_(img.tags).contains(val)) return true;
   })?'/static/img/spoiler.png':'/img/thumb/'+img.filename;
-  print('<img src="'+imgloc+'" class="to-scriptize fade-img" title="'+img.name+'">');
+  var imgtitle = img.name;
+  if(useLazyLoad) {
+    print('<img class="lazy to-scriptize" src="/static/img/white.png" data-original="'+imgloc+'"');
+    print(' title="'+imgtitle+'"><noscript>');
+  }
+  print('<img src="'+imgloc+'" class="to-scriptize" title="'+imgtitle+'">');
+  if(useLazyLoad) {
+    print('</noscript>');
+  }
   print('</a></li>');
 }); %>

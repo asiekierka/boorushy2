@@ -298,7 +298,7 @@ function listImages(req,res,images1,options,defConfig,maxVal) {
   var maxValue = options["length"] || maxVal || config.pageSize;
   if(maxValue > config.maxPageSize) maxValue = config.maxPageSize;
   getImagesTagged(config.hiddenTags,function(hiddenImages) {
-    if(!_(req.cookies.showHidden).isUndefined()) images1a = images1;
+    if(!_(req.cookies.showHidden).isUndefined() || req.query["hidden"] == true) images1a = images1;
     else images1a = _.difference(images1,hiddenImages);
     imageDB.range(images1a,start,maxValue,function(images2) {
       var conf = _.defaults({images: images2, position: start, maxpos: images1.length, req: req}, defConfig || {});

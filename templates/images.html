@@ -12,11 +12,24 @@
 </ul>
 <script type="text/javascript">
 function scriptize() {
+<%
+  if(useLazyLoad) {
+    print("$('img.lazy').show().lazyload();");
+  }
+%>
   $("img.to-scriptize").each(function(idx) {
-    var newSrc = $(this).attr("src");
-    if(window.devicePixelRatio>=1.5 && newSrc.indexOf("thumb2x")<0)
-      newSrc = newSrc.replace("thumb","thumb2x");
-    $(this).attr("src",newSrc).removeClass("to-scriptize");
+    var jqt = $(this);
+    if(window.devicePixelRatio>=1.5) {
+      var newSrc = jqt.attr("src");
+      if(newSrc.indexOf("thumb2x")<0)
+        newSrc = newSrc.replace("thumb","thumb2x");
+      var newDo = $(this).attr("data-original");
+      if(newDo.indexOf("thumb2x")<0)
+        newDo = newDo.replace("thumb","thumb2x");
+      jqt.attr("src",newSrc);
+      if(newDo.length > 0) jqt.attr("data-original",newDo);
+    }
+    jqt.removeClass("to-scriptize");
   });
 }
 function pageLoad() {

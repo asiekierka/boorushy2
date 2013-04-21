@@ -1,5 +1,6 @@
 { "port": 8080, "pageSize": 15, "maxPageSize": 500, "title": "Booru", "htmlTitle": "Booru",
   "allowJson": true,
+  "useLazyLoad": true,
   "salt": "",
   "defaultUsers": {
     "admin": "admin"

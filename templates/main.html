@@ -23,6 +23,9 @@ body {
 h1 {
  color: #222;
 }
+<% if(useLazyLoad) {
+  print(".lazy { display: none; }");
+} %>
 </style>
 </head>
 <body>
@@ -30,6 +33,9 @@ h1 {
   if(useZepto) print("/static/js/zepto.min.js");
   else print("/static/js/jquery-1.9.1.min.js");
 %>"></script>
+<% if(useLazyLoad) {
+  print('<script src="/static/js/jquery.lazyload.min.js"></script>');
+} %>
 <script src="/static/js/bootstrap.min.js"></script>
 <script src="/static/js/underscore-min.js"></script>
 <div class="container" id="page-inject"><%= page %></div>
