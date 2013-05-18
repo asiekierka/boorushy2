@@ -91,28 +91,30 @@ app.use(express.session({key: "booru-user",secret: config.salt}));
 
 function restrict(req,res,next) {
   if(req.session.user) { next(); }
-  else { req.session.error = "Access denied!"; res.send(403,"Access denied - log in."); }
+  else { req.session.error = "Access denied!"; error(req,res,"Access denied - log in.",403); }
 }
 function restrictAdmin(req,res,next) {
   if(req.session.user && req.session.type == "admin") { next(); }
-  else { req.session.error = "Access denied!"; res.send(403,"Access denied - log in."); }
+  else { req.session.error = "Access denied!"; error(req,res,"Access denied - log in.",403); }
+}
+function error(req,res,text,codeO) {
+  var code = codeO || 500;
+  if(req.query["mode"] == "json")
+    res.send({error: text, errorCode: code});
+  else
+    res.send(code,text);
 }
 function parse(req,res,next) { if(req.params[0]) req.params = req.params[0].split("/"); else req.params = [""]; next(); }
 function getImage(req,res,next) {
   imageDB.get(req.params.shift(),function(data) {
-    if(data==null) { if(req.query["mode"] == "json") {
-        res.json({error: "Image not found!", errorCode: 404}); return;
-      } else {
-        res.send(404,"Image not found!"); return;
-      }
-    }
+    if(data==null) { error(req,res,"Image not found!",404); return; }
     req.image = data;
     next();
   });
 }
 function getImagePost(req,res,next) {
   imageDB.get(req.body.id,function(data) {
-    if(data==null) { res.send(404,"Image not found!"); return; }
+    if(data==null) { error(req,res,"Image not found!",404); return; }
     req.image = data;
     next();
   });
@@ -121,7 +123,7 @@ function finishUpload(res,fn,thfn,path,metadata, next) {
   var ext = util.fileExt(fn);
   fs.readFile(path, function(err, data) {
     if(err) throw err;
-    addImage(data,ext,metadata,function(){ res.send("OK"); if(_.isFunction(next)) next(); },thfn,metadata.gravity);
+    addImage(data,ext,metadata,function(){ error(req,res,"OK",200); if(_.isFunction(next)) next(); },thfn,metadata.gravity);
   });
 }
 imageHandler.express(express,app);
@@ -129,15 +131,15 @@ app.post("/upload/post", express.bodyParser());
 app.post("/upload/post", restrict, function(req,res) {
   var thumbnailFilename;
   if(!req.body.uploader)
-    { res.send(500,"Missing metadata!"); return; }
+    { error(req,res,"Missing metadata!"); return; }
   var metadata = req.body;
   metadata.tags = util.tagArray(req.body.tags_string);
   if(req.files && req.files.thumbnail) thumbnailFilename = req.files.thumbnail.path;
   if(!req.files || !req.files.image) {
-    if(!req.body.url) { res.send(500,"No file specified!"); return; }
+    if(!req.body.url) { error(req,res,"No file specified!"); return; }
     ext = util.fileExt(req.body.url);
     tempurl.download(req.body.url, function(err, tmpfile, callback){
-      if(err) { res.send(500,"Download error!"); return; }
+      if(err) { error(req,res,"Download error!"); return; }
       finishUpload(res, "file."+util.fileExt(tmpfile), thumbnailFilename, tmpfile, metadata, callback);
     });
   } else { finishUpload(res, req.files.image.name, thumbnailFilename, req.files.image.path, metadata); }
@@ -170,7 +172,7 @@ function handleSearch(req, res, query) {
           } else next();
         }, function() {
           // Done sorting!
-          if(stack.length > 1) { res.send(500,"Something quite bad happened! "+JSON.stringify(stack)); return; }
+          if(stack.length > 1) { error(req,res,"Something quite bad happened! "+JSON.stringify(stack)); return; }
           var result = stack.pop();
           cacheDB.set("search:"+query,result,60,null);
           listImages(req,res,result,req.query,{noAjaxLoad: true, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
@@ -208,9 +210,9 @@ app.post("/login", express.bodyParser(), function(req,res) {
             req.session.type = data.type;
             res.redirect("/");
           });
-        } else { res.send(403,"Invalid username or password!"); return; }
+        } else { error(req, res, "Invalid username or password!", 403); return; }
       });
-    } else { res.send(403,"Invalid username or password!"); return; }
+    } else { error(req, res, "Invalid username or password!", 403); return; }
   });
 });
 app.get("/login", function(req,res) {
@@ -281,7 +283,7 @@ function listImages(req,res,images1,options,defConfig,maxVal) {
       console.log(options);
       if(options["mobile"] == 'true') conf.mobile = true;
       if(mode=="json") {
-        if(config.allowJson == false) { res.send(403); return; }
+        if(config.allowJson == false) { error.send(req, res, "JSON not allowed!", 403); return; }
         res.json({position: start, length: images2.length, results: images2});
       } else {
         if(_(options).has("subtitle2"))
