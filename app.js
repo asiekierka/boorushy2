@@ -26,7 +26,7 @@ var app = express();
 
 var defaultConfig = require('./config-default.json')
   , defaultImage = { author: "Unknown", source: "/", uploader: "Computer"}
-  , defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null, noAjaxLoad: false};
+  , defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null, noAjaxLoad: false, mobile: false};
 
 // Configure
 var config = fs.existsSync("./config.json") ? require('./config.json') : defaultConfig
@@ -79,11 +79,11 @@ function makeRawTemplate(name,conf,noHeader) {
     return body;
   } catch(e) { return "Template error: " + e.message; }
 }
-function makeTemplate(name,conf,raw,noHeader) {
+function makeTemplate(name,conf2,raw,noHeader) {
   try {
     if(raw=="raw") return makeRawTemplate(name,conf,noHeader);
-    var conf2 = _.defaults(conf,config,defaultSiteConfig);
-    return _.template(templates["main"],_.defaults(conf2,{page: makeRawTemplate(name,conf,noHeader)}));
+    var conf = _.defaults(conf2,config,defaultSiteConfig);
+    return _.template(templates["main"],_.defaults(conf,{page: makeRawTemplate(name,conf,noHeader)}));
   } catch(e) { return "Template error: " + e.message; }
 }
 
@@ -303,6 +303,8 @@ function listImages(req,res,images1,options,defConfig,maxVal) {
     else images1a = _.difference(images1,hiddenImages);
     imageDB.range(images1a,start,maxValue,function(images2) {
       var conf = _.defaults({images: images2, position: start, maxpos: images1.length, req: req}, defConfig || {isSearch: false});
+      console.log(options);
+      if(options["mobile"] == 'true') conf.mobile = true;
       if(mode=="json") {
         if(config.allowJson == false) { res.send(403); return; }
         res.json({position: start, length: images2.length, results: images2});
