@@ -27,6 +27,17 @@ var defaultConfig = require('./config-default.json')
   , defaultImage = { author: "Unknown", source: "/", uploader: "Computer"}
   , defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null, noAjaxLoad: false, mobile: false};
 
+// Utility
+function error(req,res,text,codeO) {
+  var code = codeO || 500;
+  if(req.query["mode"] == "json")
+    res.send({error: text, errorCode: code});
+  else
+    res.send(code,text);
+}
+
+function parse(req,res,next) { if(req.params[0]) req.params = req.params[0].split("/"); else req.params = [""]; next(); }
+
 // Configure
 var config = fs.existsSync("./config.json") ? require('./config.json') : defaultConfig
   , templates = {};
@@ -43,7 +54,9 @@ _.each(fs.readdirSync("templates/"),function(filename) {
   templates[name] = fs.readFileSync("./templates/"+filename,"utf8");    
 });
 
-// AddImage
+imageHandler.express(express,app);
+
+// Image Adding
 function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
   var hash = crypto.createHash('md5').update(rawdata).digest('hex');
   imageDB.hashed(hash,function(cont) {
@@ -85,7 +98,7 @@ function makeTemplate(name,conf2,raw,noHeader) {
   return _.template(templates["main"],_.defaults(conf, {page: makeRawTemplate(name,conf,noHeader)}));
 }
 
-// Auth code
+// ** LOGIN HANDLER **
 app.use(express.cookieParser(config.salt));
 app.use(express.session({key: "booru-user",secret: config.salt}));
 
@@ -97,36 +110,30 @@ function restrictAdmin(req,res,next) {
   if(req.session.user && req.session.type == "admin") { next(); }
   else { req.session.error = "Access denied!"; error(req,res,"Access denied - log in.",403); }
 }
-function error(req,res,text,codeO) {
-  var code = codeO || 500;
-  if(req.query["mode"] == "json")
-    res.send({error: text, errorCode: code});
-  else
-    res.send(code,text);
-}
-function parse(req,res,next) { if(req.params[0]) req.params = req.params[0].split("/"); else req.params = [""]; next(); }
-function getImage(req,res,next) {
-  imageDB.get(req.params.shift(),function(data) {
-    if(data==null) { error(req,res,"Image not found!",404); return; }
-    req.image = data;
-    next();
+app.get("/logout", function(req,res) {
+  req.session.destroy(function(){ res.redirect("/"); });
+});
+app.post("/login", express.bodyParser(), function(req,res) {
+  var encPassword = userDB.hash(req.body.password);
+  userDB.exists(req.body.username, function(err, exists) {
+    if(exists) {
+      userDB.get(req.body.username, function(err, data) {
+        if(data.pass == encPassword) {
+            req.session.regenerate(function() {
+            req.session.user = data.user;
+            req.session.type = data.type;
+            res.redirect("/");
+          });
+        } else { error(req, res, "Invalid username or password!", 403); return; }
+      });
+    } else { error(req, res, "Invalid username or password!", 403); return; }
   });
-}
-function getImagePost(req,res,next) {
-  imageDB.get(req.body.id,function(data) {
-    if(data==null) { error(req,res,"Image not found!",404); return; }
-    req.image = data;
-    next();
-  });
-}
-function finishUpload(res,fn,thfn,path,metadata, next) {
-  var ext = util.fileExt(fn);
-  fs.readFile(path, function(err, data) {
-    if(err) throw err;
-    addImage(data,ext,metadata,function(){ error(req,res,"OK",200); if(_.isFunction(next)) next(); },thfn,metadata.gravity);
-  });
-}
-imageHandler.express(express,app);
+});
+app.get("/login", function(req,res) {
+  res.send(makeTemplate("login",{req: req}));
+});
+
+// Upload
 app.post("/upload/post", express.bodyParser());
 app.post("/upload/post", restrict, function(req,res) {
   var thumbnailFilename;
@@ -144,7 +151,18 @@ app.post("/upload/post", restrict, function(req,res) {
     });
   } else { finishUpload(res, req.files.image.name, thumbnailFilename, req.files.image.path, metadata); }
 });
+function finishUpload(res,fn,thfn,path,metadata, next) {
+  var ext = util.fileExt(fn);
+  fs.readFile(path, function(err, data) {
+    if(err) throw err;
+    addImage(data,ext,metadata,function(){ error(req,res,"OK",200); if(_.isFunction(next)) next(); },thfn,metadata.gravity);
+  });
+}
+app.get("/upload", restrict, parse, function(req,res,next) {
+  res.send(makeTemplate("upload",{req: req, username: req.session.user, useZepto: false},req.params[0]));
+});
 
+// Searching
 function handleQuery(entry,images,allImages) {
   if(entry.invert) return _(allImages).filter(function(val) {
     return !_(images).contains(val);
@@ -196,28 +214,8 @@ app.get("/search",express.bodyParser(), function(req,res) {
   console.log(query);
   handleSearch(req, res, query);
 });
-app.get("/logout", function(req,res) {
-  req.session.destroy(function(){ res.redirect("/"); });
-});
-app.post("/login", express.bodyParser(), function(req,res) {
-  var encPassword = userDB.hash(req.body.password);
-  userDB.exists(req.body.username, function(err, exists) {
-    if(exists) {
-      userDB.get(req.body.username, function(err, data) {
-        if(data.pass == encPassword) {
-            req.session.regenerate(function() {
-            req.session.user = data.user;
-            req.session.type = data.type;
-            res.redirect("/");
-          });
-        } else { error(req, res, "Invalid username or password!", 403); return; }
-      });
-    } else { error(req, res, "Invalid username or password!", 403); return; }
-  });
-});
-app.get("/login", function(req,res) {
-  res.send(makeTemplate("login",{req: req}));
-});
+
+// Editing
 app.get("/delete/*", restrictAdmin, parse, function(req,res) {
   console.log("Deleting ID " + req.params[0]);
   imageDB.unset(req.params[0],function(){res.redirect("/");});
@@ -231,9 +229,6 @@ app.get("/regenerate/*", restrictAdmin, parse, function(req,res) {
       res.redirect("/");
     });
   });
-});
-app.get("/upload", restrict, parse, function(req,res,next) {
-  res.send(makeTemplate("upload",{req: req, username: req.session.user, useZepto: false},req.params[0]));
 });
 app.post("/edit", express.bodyParser(), restrict, getImagePost, function(req,res) {
   var image = req.image;
@@ -251,6 +246,22 @@ app.post("/edit", express.bodyParser(), restrict, getImagePost, function(req,res
 app.get("/edit/*", restrict, parse, getImage, function(req,res) {
   res.send(makeTemplate("edit",{image: _.defaults(req.image, defaultImage), req: req},req.params[0]));
 });
+
+// Image retrieval
+function getImage(req,res,next) {
+  imageDB.get(req.params.shift(),function(data) {
+    if(data==null) { error(req,res,"Image not found!",404); return; }
+    req.image = data;
+    next();
+  });
+}
+function getImagePost(req,res,next) {
+  imageDB.get(req.body.id,function(data) {
+    if(data==null) { error(req,res,"Image not found!",404); return; }
+    req.image = data;
+    next();
+  });
+}
 app.get("/image/*", parse, getImage, function(req,res) {
   if(req.query["mode"] == "json") {
     res.json(req.image);
@@ -268,6 +279,7 @@ function getImagesTagged(tags,next) {
   } else next([]);
 }
 
+// Image listing
 function listImages(req,res,images1,options,defConfig,maxVal) {
   var start = parseInt(options["start"]) || 0;
   var mode = options["mode"] || "";
@@ -304,9 +316,6 @@ function listImages(req,res,images1,options,defConfig,maxVal) {
     });
   });
 }
-app.get("/mu-d6235ad9-7bb860d1-37dcb55d-226ee30b",function(req,res) {
-  res.send("42");
-});
 
 app.get("/*", function(req,res) {
   var p = qs.unescape(req.path).split("/");
@@ -315,6 +324,11 @@ app.get("/*", function(req,res) {
     listImages(req,res,images,_(req.query).extend({"subtitle1": p[1], "subtitle2": p[2]}));
   });
   else imageDB.images(function(images) { listImages(req,res,images,req.query); });
+});
+
+// Personal boost.io code
+app.get("/mu-d6235ad9-7bb860d1-37dcb55d-226ee30b",function(req,res) {
+  res.send("42");
 });
 
 // Config validation
