@@ -1,7 +1,6 @@
 var ImageDB = {}
   , redis = require("redis")
   , _ = require("underscore")
-  , JSON = require("JSON2")
   , async = require("async");
 
 var client = null;

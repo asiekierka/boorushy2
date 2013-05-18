@@ -5,7 +5,6 @@ var _ = require('underscore')
   , config = require('./config.json')
   , child = require('child_process')
   , async = require('async')
-  , path = require('path')
   , util = require('./util.js');
 
 var thumbW = 300, thumbH = 300;
@@ -45,24 +44,29 @@ exports.optimize = function(path,data) {
   });
 }
 
-exports.thumbnail = function(src,dest,dest2x,w1,h1,grav,cb) {
+exports.handle = function(src,destName,w1,h1,grav,options) {
   var w = w1 || thumbW*2
     , h = h1 || thumbH*2
+    , dest = "./img/thumb/"+destName
+    , dest2x = "./img/thumb2x/"+destName
     , self = this;
-  console.log("Thumbnailing " + src);
-  t2 = function() {
+  console.log("Thumbnailing " + src + " to " + dest);
+  t2 = function(err) {
+    if(err) throw err;
     if(_.isString(dest2x) && (w>thumbW || h>thumbH))
-      self.resize(src,dest2x,thumbW*2,thumbH*2,function() {
+      self.resize(src,dest2x,thumbW*2,thumbH*2,function(err) {
+        if(err) throw err;
         if(optimizeMode == "all" || optimizeMode == "thumbs" || optimizeMode == "thumbnails") {
           self.optimize(dest,{format: util.fileExt(src)});
           self.optimize(dest2x,{format: util.fileExt(src)});
         }
 	console.log("Done!");
-        if(_.isFunction(cb)) cb();
+        if(_.isFunction(options.callback)) options.callback();
       },grav);
-    else if(_.isFunction(cb)) cb();
+    else if(_.isFunction(options.callback)) options.callback();
   };
   this.resize(src,dest,thumbW,thumbH,t2,grav);
+  if(options.optimizeSrc && optimizeMode == "all" && _(src).startsWith("./img")) self.optimize(src,{format: util.fileExt(src)});
 }
 
 // Create missing directories (just in case)

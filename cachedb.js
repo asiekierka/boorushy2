@@ -1,7 +1,6 @@
 var CacheDB = {}
   , redis = require("redis")
   , _ = require("underscore")
-  , JSON = require("JSON2")
   , async = require("async")
   , crypto = require('crypto');
 

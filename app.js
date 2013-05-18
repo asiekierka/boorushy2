@@ -3,12 +3,10 @@ var express = require('express')
   , mkdirp = require('mkdirp')
   , _ = require('underscore')
   , fs = require('fs')
-  , JSON = require('JSON2')
   , imageDB = require('./imagedb.js').ImageDB
   , userDB = require('./userdb.js').UserDB
   , cacheDB = require('./cachedb.js').CacheDB
   , im = require('imagemagick')
-  , path = require('path')
   , qs = require('querystring')
   , crypto = require('crypto')
   , argv = require('optimist').argv
@@ -51,17 +49,18 @@ function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
   imageDB.hashed(hash,function(cont) {
     if(!cont) imageDB.count("imageId",function(err,id) {
       var path = id+"."+format;
+      var source = "./img/src/"+path;
       console.log("Writing file " + id);
-      fs.writeFile("./img/src/"+path,rawdata,"utf8",function() {
+      fs.writeFile(source,rawdata,"utf8",function() {
         console.log("Identifying file " + id);
-        im.identify("./img/src/"+path, function(err,features) {
+        im.identify(source, function(err,features) {
           if(err) throw err;
           var data = { id: id, format: format, filename: path, originalFilename: info.filename,
                        width: features.width, height: features.height, hash: hash, thumbnailGravity: grav || "center"};
           data = _.defaults(data,info);
+          delete data.gravity; // Fix for duplicate data
           imageDB.set(id,_.defaults(data,defaultImage));
-          imageHandler.thumbnail(thumbnailsrc || ("./img/src/"+path),"./img/thumb/"+path,"./img/thumb2x/"+path,thumbnailsrc?600:features.width,thumbnailsrc?600:features.height,grav);
-          if(config.optimize == "all") imageHandler.optimize("./img/src/"+path,data);
+          imageHandler.handle(thumbnailsrc || source, path, thumbnailsrc?600:features.width,thumbnailsrc?600:features.height,grav,{optimizeSrc: true});
           if(_.isFunction(callback)) callback();
         });
       });
@@ -73,19 +72,17 @@ function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
 // Templating
 function makeRawTemplate(name,conf,noHeader) {
   try {
-    var conf2 = _.defaults(conf,config,defaultSiteConfig);
+    var conf2 = _.defaults(conf,config,defaultSiteConfig,defaultConfig);
     var body = _.template(templates[name],conf2);
     if(!noHeader)
       body = _.template(templates["header"],conf2) + body;
     return body;
-  } catch(e) { return "Template error: " + e.message; }
+  } catch(e) { var s = "RawTemplate error: " + e.message + " ["+name+"]"; console.trace(s); return s; }
 }
 function makeTemplate(name,conf2,raw,noHeader) {
-  try {
-    if(raw=="raw") return makeRawTemplate(name,conf,noHeader);
-    var conf = _.defaults(conf2,config,defaultSiteConfig);
-    return _.template(templates["main"],_.defaults(conf,{page: makeRawTemplate(name,conf,noHeader)}));
-  } catch(e) { return "Template error: " + e.message; }
+  if(raw=="raw") return makeRawTemplate(name,conf2,noHeader);
+  var conf = _.defaults(conf2,config,defaultSiteConfig,defaultConfig);
+  return _.template(templates["main"],_.defaults(conf, {page: makeRawTemplate(name,conf,noHeader)}));
 }
 
 // Auth code
@@ -239,7 +236,7 @@ app.get("/regenerate/*", restrictAdmin, parse, function(req,res) {
   console.log("Regenerating ID " + id);
   imageDB.regenerate(id,function(){
     imageDB.get(id,function(image) {
-      imageHandler.thumbnail("./img/src/"+image.filename,"./img/thumb/"+image.filename,"./img/thumb2x/"+image.filename,null,null,image.thumbnailGravity);
+      imageHandler.handle("./img/src/"+image.filename,image.filename,null,null,image.thumbnailGravity,{optimizeSrc: false});
       res.redirect("/");
     });
   });
@@ -255,7 +252,7 @@ app.post("/edit", express.bodyParser(), restrict, getImagePost, function(req,res
   image.thumbnailGravity = req.body.gravity || image.thumbnailGravity;
   image.tags = util.tagArray(req.body.tags_string) || image.tags || [];
   if(req.files && req.files.thumbnail)
-    imageHandler.thumbnail(req.files.thumbnail.path,"./img/thumb/"+image.filename,"./img/thumb2x/"+image.filename,null,null,image.thumbnailGravity);
+    imageHandler.handle(req.files.thumbnail.path,image.filename,null,null,image.thumbnailGravity,{optimizeSrc: false});
   imageDB.set(image.id,image,function() {
     res.redirect("/");
   }, true);
@@ -393,7 +390,7 @@ if(argv.t || argv.thumb) {
   imageDB.images(function(images) {
     imageDB.getArray(images, function(err,idata) {
       async.eachLimit(idata,config.optimizationThreads || 1,function(image,next) {
-        imageHandler.thumbnail("./img/src/"+image.filename,"./img/thumb/"+image.filename,"./img/thumb2x/"+image.filename,null,null,image.thumbnailGravity,next);
+        imageHandler.handle("./img/src/"+image.filename,image.filename,null,null,image.thumbnailGravity,{callback: next, optimizeSrc: false});
       });
     });
   });
