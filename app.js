@@ -17,7 +17,8 @@ var express = require('express')
   , redis = require('redis')
   , queryparser = require('./queryparser.js').QueryParser
   , imageHandler = require('./image.js')
-  , tempurl = require('./tempurl.js');
+  , tempurl = require('./tempurl.js')
+  , util = require('./util.js');
 
 _.str = require('underscore.string');
 _.mixin(_.str.exports());
@@ -87,13 +88,6 @@ function makeTemplate(name,conf2,raw,noHeader) {
   } catch(e) { return "Template error: " + e.message; }
 }
 
-// Tagify string
-function tagArray(str) {
-  var t = str.split(",");
-  t = _.map(t,function(v){return v.trim();});
-  return t;
-}
-
 // Auth code
 app.use(express.cookieParser(config.salt));
 app.use(express.session({key: "booru-user",secret: config.salt}));
@@ -126,13 +120,8 @@ function getImagePost(req,res,next) {
     next();
   });
 }
-// File/thumbnail
-function fileExt(name) {
-  var ext = path.extname(name).split(".");
-  return ext[ext.length-1];
-}
 function finishUpload(res,fn,thfn,path,metadata, next) {
-  var ext = fileExt(fn);
+  var ext = util.fileExt(fn);
   fs.readFile(path, function(err, data) {
     if(err) throw err;
     addImage(data,ext,metadata,function(){ res.send("OK"); if(_.isFunction(next)) next(); },thfn,metadata.gravity);
@@ -145,14 +134,14 @@ app.post("/upload/post", restrict, function(req,res) {
   if(!req.body.uploader)
     { res.send(500,"Missing metadata!"); return; }
   var metadata = req.body;
-  metadata.tags = tagArray(req.body.tags_string);
+  metadata.tags = util.tagArray(req.body.tags_string);
   if(req.files && req.files.thumbnail) thumbnailFilename = req.files.thumbnail.path;
   if(!req.files || !req.files.image) {
     if(!req.body.url) { res.send(500,"No file specified!"); return; }
-    ext = fileExt(req.body.url);
+    ext = util.fileExt(req.body.url);
     tempurl.download(req.body.url, function(err, tmpfile, callback){
       if(err) { res.send(500,"Download error!"); return; }
-      finishUpload(res, "file."+fileExt(tmpfile), thumbnailFilename, tmpfile, metadata, callback);
+      finishUpload(res, "file."+util.fileExt(tmpfile), thumbnailFilename, tmpfile, metadata, callback);
     });
   } else { finishUpload(res, req.files.image.name, thumbnailFilename, req.files.image.path, metadata); }
 });
@@ -264,7 +253,7 @@ app.post("/edit", express.bodyParser(), restrict, getImagePost, function(req,res
   image.author = req.body.author || image.author;
   image.source = req.body.source || image.source;
   image.thumbnailGravity = req.body.gravity || image.thumbnailGravity;
-  image.tags = tagArray(req.body.tags_string) || image.tags || [];
+  image.tags = util.tagArray(req.body.tags_string) || image.tags || [];
   if(req.files && req.files.thumbnail)
     imageHandler.thumbnail(req.files.thumbnail.path,"./img/thumb/"+image.filename,"./img/thumb2x/"+image.filename,null,null,image.thumbnailGravity);
   imageDB.set(image.id,image,function() {

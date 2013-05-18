@@ -2,18 +2,14 @@ var http = require('http')
   , fs = require('fs')
   , _ = require('underscore')
   , path = require('path')
-  , os = require('os');
-
-function fileExt(name) {
-  var ext = path.extname(name).split(".");
-  return ext[ext.length-1];
-}
+  , os = require('os')
+  , util = require('./util.js');
 
 exports.download = function(url, callback) {
   var now = new Date();
   var tmpfn = path.join(os.tmpDir(), [
     "tmp-", now.getTime(), "-", Math.floor(Math.random()*1000000),
-    ".", fileExt(url)
+    ".", util.fileExt(url)
   ].join(""));
   console.log("Downloading " + url + " to " + tmpfn);
   var stream = fs.createWriteStream(tmpfn);
