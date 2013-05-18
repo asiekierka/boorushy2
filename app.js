@@ -71,7 +71,7 @@ function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
 // Templating
 function makeRawTemplate(name,conf,noHeader) {
   try {
-    var conf2 = _.defaults(conf,config,defaultSiteConfig);
+    var conf2 = _.defaults(conf,config,defaultConfig,defaultSiteConfig);
     var body = _.template(templates[name],conf2);
     if(!noHeader)
       body = _.template(templates["header"],conf2) + body;

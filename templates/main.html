@@ -42,6 +42,7 @@ h1 {
 <div class="container" id="page-inject"><%= page %></div>
 <script>
 function fixURLs() {
+  <% if(noAjaxURL) { print('return;'); } %>
   $("a").each(function(idx) {
     if(!$(this).hasClass("no-ajax"))
       $(this).click(changeView);
