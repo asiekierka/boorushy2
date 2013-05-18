@@ -2,6 +2,7 @@
   "noAjaxURL": false,
   "allowJson": true,
   "useLazyLoad": true,
+  "socialButtons": true,
   "salt": "",
   "defaultUsers": {
     "admin": "admin"

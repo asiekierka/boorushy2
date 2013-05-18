@@ -15,6 +15,9 @@ Tags: <%
 Author: <a href="/author/<%= image.author %>/"><%= image.author %></a> (<a class="no-ajax" href="<%= image.source %>">Source</a>)<br>
 Uploaded by <a href="/uploader/<%= image.uploader %>/"><%= image.uploader %></a> 
 <% if(req.session.user) print('[<a href="/edit/'+image.id+'/">edit</a>]'); %>
+<% if(socialButtons)
+     print("<br><br>"+template("social-buttons"));
+%>
 </div>
 <script type="text/javascript">
 var iw = <%= image.width %>

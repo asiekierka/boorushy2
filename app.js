@@ -25,7 +25,12 @@ var app = express();
 
 var defaultConfig = require('./config-default.json')
   , defaultImage = { author: "Unknown", source: "/", uploader: "Computer"}
-  , defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null, noAjaxLoad: false, mobile: false};
+  , defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null, noAjaxLoad: false, mobile: false}
+  , templateFunctions = {
+    template: function(name) {
+      return makeRawTemplate(name,this,true);
+    }
+  };
 
 // Utility
 function error(req,res,text,codeO) {
@@ -85,7 +90,7 @@ function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
 // Templating
 function makeRawTemplate(name,conf,noHeader) {
   try {
-    var conf2 = _.defaults(conf,config,defaultSiteConfig,defaultConfig);
+    var conf2 = _.defaults(conf,config,defaultSiteConfig,defaultConfig,templateFunctions);
     var body = _.template(templates[name],conf2);
     if(!noHeader)
       body = _.template(templates["header"],conf2) + body;
@@ -94,8 +99,8 @@ function makeRawTemplate(name,conf,noHeader) {
 }
 function makeTemplate(name,conf2,raw,noHeader) {
   if(raw=="raw") return makeRawTemplate(name,conf2,noHeader);
-  var conf = _.defaults(conf2,config,defaultSiteConfig,defaultConfig);
-  return _.template(templates["main"],_.defaults(conf, {page: makeRawTemplate(name,conf,noHeader)}));
+  var conf = _.defaults(conf2,config,defaultSiteConfig,defaultConfig,templateFunctions);
+  return _.template(templates["main"],_.defaults(conf,{page: makeRawTemplate(name,conf,noHeader)}));
 }
 
 // ** LOGIN HANDLER **

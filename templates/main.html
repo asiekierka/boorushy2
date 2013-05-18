@@ -7,23 +7,18 @@
 <link href="/static/css/bootstrap.min.css" rel="stylesheet" type="text/css">
 <link href="/static/css/mobile.css" rel="stylesheet" type="text/css" <% if(!mobile) print('media="handheld"'); %>>
 <style>
+a.social:hover { opacity: 0.7; }
 a.normal {
   color: #000;
   text-decoration: none;
 }
-.padded-row {
-  margin-top: 20px;
-}
+.padded-row { margin-top: 20px; }
 body {
   background-color: <%= style.bgcolor %>;
 }
-.thumbnail {
-  background-color: #FFF;
-}
+.thumbnail { background-color: #FFF; }
 .thumbnail-300 { width: 300px; height: 300px !important; }
-h1 {
- color: #222;
-}
+h1 { color: #222; }
 <% if(useLazyLoad) {
   print(".lazy { display: none; }");
 } %>

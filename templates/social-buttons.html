@@ -1,0 +1,23 @@
+<!-- Wonderful icons by WPZOOM -->
+<div id="social-buttons">
+<a class="social" class="facebook-button" href="http://facebook.com/sharer.php" title="Share on Facebook"><img src="/static/img/24x24/facebook.png"></img></a>
+<a class="social" class="reddit-button" href="http://www.reddit.com/submit" title="Share on Reddit"><img src="/static/img/24x24/reddit.png"></img></a>
+<a class="social" class="tumblr-button" href="http://www.tumblr.com/share" title="Share on Tumblr"><img src="/static/img/24x24/tumblr.png"></img></a>
+<a class="social" class="twitter-button" href="http://www.twitter.com/share" title="Share on Twitter"><img src="/static/img/24x24/twitter.png"></img></a>
+</div>
+<script type="text/javascript">
+  var uri = encodeURIComponent(window.location);
+  $(".social").addClass("no-ajax");
+  $(".facebook-button").click(function() {
+    window.location = 'http://www.facebook.com/sharer.php?u='+uri+'&src=sp'; return false;
+  });
+  $(".reddit-button").click(function() {
+    window.location = 'http://www.reddit.com/submit?url='+uri; return false;
+  });
+  $(".tumblr-button").click(function() {
+    window.location = 'http://www.tumblr.com/share?v=3&u='+uri; return false;
+  });
+  $(".twitter-button").click(function() {
+    window.location = 'http://www.twitter.com/share?url='+uri; return false;
+  });
+</script>
