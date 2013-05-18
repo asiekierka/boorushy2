@@ -283,7 +283,7 @@ function listImages(req,res,images1,options,defConfig,maxVal) {
       console.log(options);
       if(options["mobile"] == 'true') conf.mobile = true;
       if(mode=="json") {
-        if(config.allowJson == false) { error.send(req, res, "JSON not allowed!", 403); return; }
+        if(config.allowJson == false) { error(req, res, "JSON not allowed!", 403); return; }
         res.json({position: start, length: images2.length, results: images2});
       } else {
         if(_(options).has("subtitle2"))
