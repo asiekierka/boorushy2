@@ -57,8 +57,13 @@ function redirect(url,noPush) {
     if(!noPush) history.pushState({currentUrl: url}, "", url);
     pageUnload();
     $("#page-inject").html(data);
-    setTimeout(fixURLs,0);
-    setTimeout(pageLoad,0);
+    setTimeout(function() {
+      fixURLs();
+      pageLoad();
+      setTimeout(function() {
+        $(window).trigger("scroll");
+      }, 20);
+    }, 0);
   });
 }
 function changeView(ev) {

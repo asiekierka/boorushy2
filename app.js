@@ -37,6 +37,7 @@ if(!_(config).contains("htmlTitle")) {
   if(_(config).contains("logo")) config.htmlTitle = "<img src='/" + config.logo + "' style='height: auto; width: 300px;'></img>";
   else config.htmlTitle = config.title;
 }
+
 _.each(fs.readdirSync("templates/"),function(filename) {
   var name = filename.split(".")[0];
   console.log("[Template] Loading template "+name);
@@ -71,7 +72,7 @@ function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
 // Templating
 function makeRawTemplate(name,conf,noHeader) {
   try {
-    var conf2 = _.defaults(conf,config,defaultConfig,defaultSiteConfig);
+    var conf2 = _.defaults(conf,config,defaultSiteConfig);
     var body = _.template(templates[name],conf2);
     if(!noHeader)
       body = _.template(templates["header"],conf2) + body;
