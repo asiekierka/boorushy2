@@ -13,7 +13,7 @@ var express = require('express')
   , bar = require('progress-bar')
   , async = require('async')
   , redis = require('redis')
-  , queryparser = require('./queryparser.js').QueryParser
+  , queryParser = require('./queryparser.js').QueryParser
   , imageHandler = require('./image.js')
   , tempurl = require('./tempurl.js')
   , util = require('./util.js');
@@ -160,23 +160,12 @@ function handleSearch(req, res, query) {
           } else if(entry.type == "string") {
             imageDB.imagesBy(entry.key,entry.value,function(images) { stack.push(handleQuery(entry,images,allImages)); next(); });
           } else if(entry.type == "numeric") {
-            var pmin = 0, pmax = 2147483647, pin = parseInt(entry.value);
-            if(entry.sign == "eq") { pmin = pin; pmax = pin; }
-            else if(entry.sign == "lt") { pmax = pin-1; } else if(entry.sign == "le") { pmax = pin; }
-            else if(entry.sign == "gt") { pmin = pin+1; } else if(entry.sign == "ge") { pmin = pin; }
-            imageDB.imagesByNum(entry.key,pmin,pmax,function(images) { stack.push(images); next(); });
+            var p = queryParser.handleNumeric(entry.sign, parseInt(entry.value));
+            imageDB.imagesByNum(entry.key,p.min,p.max,function(images) { stack.push(images); next(); });
           } else if(entry.type == "linker" && stack.length >= 2) {
             var p1 = stack.pop()
               , p2 = stack.pop();
-            if(entry.link == "or") stack.push(_.union(p1,p2));
-            else if(entry.link == "and") stack.push(_.intersection(p1,p2));
-            else if(entry.link == "xor") {
-              var p3 = [];
-              _.each(_.union(p1,p2),function(val) {
-                if(_.contains(p1,val) != _.contains(p2,val)) p3.push(val);
-              });
-              stack.push(p3);
-            }
+            stack.push(queryParser.handleLinker(entry.link, p1, p2));
             next();
           } else next();
         }, function() {
@@ -196,12 +185,12 @@ function handleSearch(req, res, query) {
   });
 }
 app.post("/search",express.bodyParser(), function(req,res) {
-  var query = queryparser.parse(req.body.query);
+  var query = queryParser.parse(req.body.query);
   console.log(query);
   handleSearch(req, res, query);
 });
 app.get("/search",express.bodyParser(), function(req,res) {
-  var query = queryparser.parse(req.query["q"] || req.query["query"]);
+  var query = queryParser.parse(req.query["q"] || req.query["query"]);
   console.log(query);
   handleSearch(req, res, query);
 });

@@ -31,6 +31,25 @@ QueryParser.check = function(valueT,sign,value) {
   return false;
 }
 
+QueryParser.handleNumeric = function(sign, pin) {
+  var pmin = 0, pmax = 2147483647;
+  if(sign == "eq") { pmin = pin; pmax = pin; }
+  else if(sign == "lt") { pmax = pin-1; } else if(sign == "le") { pmax = pin; }
+  else if(sign == "gt") { pmin = pin+1; } else if(sign == "ge") { pmin = pin; }
+  return {"min": pmin, "max": pmax};
+}
+QueryParser.handleLinker = function(link, p1, p2) {
+  if(link == "or") return _.union(p1,p2);
+  else if(link == "and") return _.intersection(p1,p2);
+  else if(link == "xor") {
+    var p3 = [];
+    _.each(_.union(p1,p2),function(val) {
+      if(_.contains(p1,val) != _.contains(p2,val)) p3.push(val);
+    });
+    return p3;
+  }
+  else return [];
+}
 // INTERNAL OPTIMIZATION STUFF
 var lKeys = _(linkers).keys()
   , lValues = _(linkers).values();
