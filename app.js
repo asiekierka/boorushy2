@@ -327,7 +327,7 @@ app.get("/cloud/*", parse, function(req,res) {
   if(req.params.length < 1 || !imageDB.isCloudTag(req.params[0])) { error(req,res,"No tag found!",404); return; }
   imageDB.getCloud(req.params[0], function(cloudData) {  
     console.log(cloudData);
-    var cloudTag = tagCloud.generate(cloudData, {});
+    var cloudTag = tagCloud.generate(cloudData, {"targetTemplate": "/"+req.params[0]+"/$TEXT"});
     var opts = {title: "All "+req.params[0]+"s", tagCloud: cloudTag, req: req};
     res.send(makeTemplate("tagcloud",opts,req.query["mode"] || "",false));
   });
