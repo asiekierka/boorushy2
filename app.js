@@ -16,7 +16,8 @@ var express = require('express')
   , queryParser = require('./queryparser.js').QueryParser
   , imageHandler = require('./image.js')
   , tempurl = require('./tempurl.js')
-  , util = require('./util.js');
+  , util = require('./util.js')
+  , tagCloud = require('./cloudgen.js');
 
 _.str = require('underscore.string');
 _.mixin(_.str.exports());
@@ -322,6 +323,15 @@ function listImages(req,res,images1,options,defConfig,maxVal) {
   });
 }
 
+app.get("/cloud/*", parse, function(req,res) {
+  if(req.params.length < 1 || !imageDB.isCloudTag(req.params[0])) { error(req,res,"No tag found!",404); return; }
+  imageDB.getCloud(req.params[0], function(cloudData) {  
+    console.log(cloudData);
+    var cloudTag = tagCloud.generate(cloudData, {});
+    var opts = {title: "All "+req.params[0]+"s", tagCloud: cloudTag, req: req};
+    res.send(makeTemplate("tagcloud",opts,req.query["mode"] || "",false));
+  });
+});
 app.get("/*", function(req,res) {
   var p = qs.unescape(req.path).split("/");
   console.log("Request: " + JSON.stringify(p)); 
@@ -362,8 +372,10 @@ userDB.exists("admin", function(err, exists) {
 });
 
 function start() {
-  app.listen(config.port);
-  console.log("Working on port " + config.port);
+  imageDB.updateDatabase(function() {
+    app.listen(config.port);
+    console.log("Working on port " + config.port);
+  });
 }
 
 if(argv.r || argv.regen) {

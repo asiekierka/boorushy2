@@ -17,3 +17,4 @@ exports.copyFile = function(src,dest) {
 exports.filesize = function(name) {
   return fs.statSync(name).size;
 }
+exports.time = function(){ return Math.round(new Date().getTime() / 1000); }

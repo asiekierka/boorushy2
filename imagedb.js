@@ -1,11 +1,76 @@
 var ImageDB = {}
   , redis = require("redis")
   , _ = require("underscore")
-  , async = require("async");
+  , async = require("async")
+  , util = require("./util.js");
 
-var client = null;
+var client = null
+  , CURRENT_VERSION = 2
+  , cloudTags = ["tag", "author", "uploader"];
 
-ImageDB.connect = function(cli) { client = cli; }
+ImageDB.connect = function(cli) {
+  client = cli;
+}
+ImageDB.log = function(t) { console.log("[ImageDB] "+t); }
+ImageDB.getVersion = function(cb) {
+  client.get("db_version",function(err, out) {
+    if(err) cb(1);
+    else cb((parseInt(out)>0) ? parseInt(out) : 1);
+  });
+}
+ImageDB.updateDatabase = function(callback) {
+  var self = this;
+  self.getVersion(function(version) {
+    if(version == 1) {
+      version = 2;
+      self.log("Updating DB from version 1 to 2");
+      self.updateCloud(function(){
+        self.log("Done updating!");
+        client.set("db_version", 2, _.bind(self.updateDatabase, self));
+      });
+    }
+    else if(version == CURRENT_VERSION) { self.log("Latest DB version, nothing to do..."); if(_.isFunction(callback)) callback(); }
+  });
+}
+
+// CLOUD CODE
+
+ImageDB.isCloudTag = function(text) { return _(cloudTags).contains(text); }
+ImageDB.updateCloud = function(callback) {
+  var self = this;
+  async.each(cloudTags, function(item, cb) {
+    self.generateCloud(item, cb);
+  }, callback);
+}
+ImageDB.getCloud = function(name, cb) {
+  client.zrange("cloud:"+name,0,-1,'WITHSCORES',function(err, data) {
+    if(err) throw err;
+    var fixedData = {};
+    while(data.length > 0) {
+      var name = data.shift();
+      fixedData[name] = parseInt(data.shift());
+    }
+    cb(fixedData);
+  });
+}
+ImageDB.generateCloud = function(name, cb) {
+  this.log("(Re)generating tag cloud "+name+"...");
+  client.smembers(name+"s", function(err, out) {
+    if(err) throw err;
+    var counts = async.map(out, function(tagName, callback) {
+      client.scard(name+":"+tagName, function(err, out) { // Count
+        callback(err, {"name": tagName, "count": out});
+      });
+    }, function(err, out) {
+      if(err) throw err;
+      var output = {};
+      async.eachSeries(out, function(tag, callback) {
+        if(tag.count == 0 || tag.name == "") callback();
+        else client.zadd("cloud:"+name, tag.count, tag.name, callback);
+      }, cb);
+    });
+  });
+}
 
 ImageDB.get = function(id,callback) {
   client.get("data:"+id,function(err,out) {
@@ -144,7 +209,7 @@ ImageDB.unsetSearchData = function(id, data, callback) {
   async.series([
     _.bind(client.srem,client,"hashes",data.hash),
     _.bind(self.unsetTags,self,id,data.tags),
-    function(cb) { console.log("dbg"); cb(); },
+    function(cb) { cb(); },
     _.bind(self.delField,self,id,"author",data.author),
     _.bind(self.delField,self,id,"uploader",data.uploader),
     _.bind(self.delSize,self,id,"width"),
@@ -172,7 +237,8 @@ ImageDB.set = function(id,data,callback,noHashCheck) {
           async.parallel([
             _.bind(client.set,client,"data:"+id,JSON.stringify(data)),
             _.bind(client.sadd,client,"images",id),
-            _.bind(self.setSearchData,self,id,data)
+            _.bind(self.setSearchData,self,id,data),
+            _.bind(self.updateCloud,self)
           ], callback);
         };
         if(exists) self.get(id,function(data) { self.unset(id,s,true); });
@@ -189,10 +255,10 @@ ImageDB.unset = function(id,callback,dontTouchData) {
     async.parallel([
       function(callback) { if(!dontTouchData) client.del("data:"+id,callback); else callback(); },
       function(callback) { if(!dontTouchData) client.srem("images",id,callback); else callback(); },
-      _.bind(self.unsetSearchData,self,id,data)
+      _.bind(self.unsetSearchData,self,id,data),
+      _.bind(self.updateCloud,self)
     ],callback);
   });
 }
-
 
 exports.ImageDB = ImageDB;
