@@ -3,6 +3,7 @@
   "allowJson": true,
   "useLazyLoad": true,
   "socialButtons": true,
+  "showClouds": true,
   "salt": "",
   "defaultUsers": {
     "admin": "admin"

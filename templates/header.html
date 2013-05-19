@@ -2,7 +2,12 @@
 <div class="span12" style="text-align: center;">
 <a class="normal" href="/"><h1><% if(_.isString(htmlTitle)) { print(htmlTitle); } else { print(title); } %></h1></a>
 <% if(_.isString(subtitle)){ print('<h4>'+subtitle+'</h4>'); } %>
-<% if(req) {
+<%
+if(showClouds) {
+  print('<a href="/cloud/tag">All tags</a> | <a href="/cloud/author">All authors</a>');
+}
+if(req) {
+  print(' | ');
   if(req.session && req.session.user) {
     print('Logged in as '+req.session.user+' | ');
     print('<a class="no-ajax" href="/upload">Upload</a> | ');
