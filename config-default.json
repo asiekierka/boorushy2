@@ -4,6 +4,7 @@
   "useLazyLoad": true,
   "socialButtons": true,
   "showClouds": true,
+  "showRandom": true,
   "salt": "",
   "defaultUsers": {
     "admin": "admin"

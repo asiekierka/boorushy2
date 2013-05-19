@@ -5,6 +5,10 @@
 <%
 if(showClouds) {
   print('<a href="/cloud/tag">All tags</a> | <a href="/cloud/author">All authors</a>');
+  if(showRandom) { print(' | '); }
+}
+if(showRandom) {
+  print('<a href="/random"><b>Random</b></a>');
 }
 if(req) {
   print(' | ');

@@ -284,6 +284,15 @@ function getImagesTagged(tags,next) {
     }, function() { next(imageList); } );
   } else next([]);
 }
+app.get("/random*", parse, function(req,res) {
+  imageDB.images(function(images) {
+    imageDB.get(images[_.random(images.length-1)], function(randomImage) {
+      if(req.query["mode"] == "json") {
+        res.json(randomImage);
+      } else res.send(makeTemplate("view",{image: randomImage, req: req},req.params[0]));
+    });
+  });
+});
 
 // Image listing
 function listImages(req,res,images1,options,defConfig,maxVal) {
