@@ -17,7 +17,8 @@ var express = require('express')
   , imageHandler = require('./image.js')
   , tempurl = require('./tempurl.js')
   , util = require('./util.js')
-  , tagCloud = require('./cloudgen.js');
+  , tagCloud = require('./cloudgen.js')
+  , template = require('./template.js');
 
 _.str = require('underscore.string');
 _.mixin(_.str.exports());
@@ -45,20 +46,13 @@ function error(req,res,text,codeO) {
 function parse(req,res,next) { if(req.params[0]) req.params = req.params[0].split("/"); else req.params = [""]; next(); }
 
 // Configure
-var config = fs.existsSync("./config.json") ? require('./config.json') : defaultConfig
-  , templates = {};
+var config = fs.existsSync("./config.json") ? require('./config.json') : defaultConfig;
 
 config = _.defaults(config,defaultConfig);
 if(!_(config).contains("htmlTitle")) {
   if(_(config).contains("logo")) config.htmlTitle = "<img src='/" + config.logo + "' style='height: auto; width: 300px;'></img>";
   else config.htmlTitle = config.title;
 }
-
-_.each(fs.readdirSync("templates/"),function(filename) {
-  var name = filename.split(".")[0];
-  console.log("[Template] Loading template "+name);
-  templates[name] = fs.readFileSync("./templates/"+filename,"utf8");    
-});
 
 imageHandler.express(express,app);
 
@@ -92,16 +86,16 @@ function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {
 function makeRawTemplate(name,conf,noHeader) {
   try {
     var conf2 = _.defaults(conf,config,defaultSiteConfig,defaultConfig,templateFunctions);
-    var body = _.template(templates[name],conf2);
+    var body = template.execute(name, conf2);
     if(!noHeader)
-      body = _.template(templates["header"],conf2) + body;
+      body = template.execute("header", conf2) + body;
     return body;
   } catch(e) { var s = "RawTemplate error: " + e.message + " ["+name+"]"; console.trace(s); return s; }
 }
 function makeTemplate(name,conf2,raw,noHeader) {
   if(raw=="raw") return makeRawTemplate(name,conf2,noHeader);
   var conf = _.defaults(conf2,config,defaultSiteConfig,defaultConfig,templateFunctions);
-  return _.template(templates["main"],_.defaults(conf,{page: makeRawTemplate(name,conf,noHeader)}));
+  return template.execute("main", _.defaults(conf,{page: makeRawTemplate(name,conf,noHeader)}));
 }
 
 // ** LOGIN HANDLER **
