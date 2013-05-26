@@ -20,7 +20,8 @@
   },
   "frameworks": {
     "zeptoJS": "/static/js/zepto.min.js",
-    "jQuery": "/static/js/jquery-1.9.1.min.js"
+    "jQuery": "/static/js/jquery-1.10.0.min.js",
+    "jQuery2": "/static/js/jquery-2.0.1.min.js"
   },
   "framework": "jQuery",
   "ajaxFetching": true,
