@@ -1,7 +1,0 @@
-"port": The port for the server.
-"salt": The salt for the passwords.
-"pageSize": The size of one AJAX-loaded page, in images.
-"defaultUsers": {"username": "password" [, ...]}: The users to be created on first launch (To reset, get redis-cli and run "DEL user:admin" - YOU MUST have an "admin" account!)
-"optimizationEngines": Optimization engines for images.
-"optimize": What to optimize ("none", "thumbs", "all")
-"useZepto": Use Zepto.js (10x smaller than jQuery but no IE compatibility)
