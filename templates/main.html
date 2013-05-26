@@ -11,18 +11,13 @@ a.social:hover { opacity: 0.7; }
 .thumbnail { background-color: #FFF; }
 .thumbnail-300 { width: 300px; height: 300px !important; }
 h1 { color: #222; }
-<% if(useLazyLoad) {
-  print(".lazy { display: none; }");
-} %>
+.lazy { display: none; }
 <%= skin.css %>
 </style>
 </head>
 <body>
-<script src="<%
-  if(useZepto) print("/static/js/zepto.min.js");
-  else print("/static/js/jquery-1.9.1.min.js");
-%>"></script>
-<% if(useLazyLoad) {
+<script src="<%= frameworks[framework] %>"></script>
+<% if(lazyLoading) {
   print('<script src="/static/js/jquery.lazyload.min.js"></script>');
 } %>
 <script src="/static/js/bootstrap.min.js"></script>
@@ -30,7 +25,7 @@ h1 { color: #222; }
 <div class="container" id="page-inject"><%= page %></div>
 <script>
 function fixURLs() {
-  <% if(noAjaxURL) { print('return;'); } %>
+  <% if(!ajaxFetching) { print('return;'); } %>
   $("a").each(function(idx) {
     if(!$(this).hasClass("no-ajax"))
       $(this).click(changeView);

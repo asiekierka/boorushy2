@@ -25,7 +25,7 @@
 <script type="text/javascript">
 function scriptize() {
 <%
-  if(useLazyLoad) {
+  if(lazyLoading) {
     print("$('img.lazy').show().lazyload();");
   }
 %>
@@ -50,7 +50,7 @@ function pageLoad() {
   var maxpos = <%= maxpos %>;
   var pageSize = <%= pageSize %>;
   var isUpdating = false;
-  var noAjaxLoad = <%= noAjaxLoad %>;
+  var noAjaxLoad = <%= !ajaxFetching %>;
   var update = function() {
     if(isUpdating || noAjaxLoad) return;
     if(position+pageSize < maxpos && $(window).scrollTop() >= ($(document).height() - $(window).height() - 300)) {

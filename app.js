@@ -27,7 +27,7 @@ var app = express();
 
 var defaultConfig = require('./config-default.json')
   , defaultImage = { author: "Unknown", source: "/", uploader: "Computer"}
-  , defaultSiteConfig = { subtitle: null, title: "Website", htmlTitle: null, noAjaxLoad: false, mobile: false}
+  , defaultSiteConfig = { subtitle: null, mobile: false}
   , templateFunctions = {
     template: function(name) {
       return makeRawTemplate(name,this,true);
@@ -54,6 +54,7 @@ if(!_(config).contains("htmlTitle")) {
   else config.htmlTitle = config.title;
 }
 
+imageHandler.setConfig(config.images);
 imageHandler.express(express,app);
 
 // Image Adding
@@ -159,7 +160,7 @@ function finishUpload(res,fn,thfn,path,metadata, next) {
   });
 }
 app.get("/upload", restrict, parse, function(req,res,next) {
-  res.send(makeTemplate("upload",{req: req, username: req.session.user, useZepto: false},req.params[0]));
+  res.send(makeTemplate("upload",{req: req, username: req.session.user, framework: "jQuery"}, req.params[0]));
 });
 
 // Searching
@@ -193,13 +194,13 @@ function handleSearch(req, res, query) {
           if(stack.length > 1) { error(req,res,"Something quite bad happened! "+JSON.stringify(stack)); return; }
           var result = stack.pop();
           cacheDB.set("search:"+query,result,60,null);
-          listImages(req,res,result,req.query,{noAjaxLoad: true, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
+          listImages(req,res,result,req.query,{ajaxFetching: false, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
         });
       });
     else { // Found cached!
       console.log("Loading from cache!");
       cacheDB.get("search:"+query,function(err,result) {
-        listImages(req,res,result,req.query,{noAjaxLoad: true, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
+        listImages(req,res,result,req.query,{ajaxFetching: false, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
       });
     }
   });
@@ -280,6 +281,7 @@ function getImagesTagged(tags,next) {
 }
 app.get("/random*", parse, function(req,res) {
   imageDB.images(function(images) {
+    if(images.length == 0) { error(req, res, "No images!", 404); return; }
     imageDB.get(images[_.random(images.length-1)], function(randomImage) {
       if(req.query["mode"] == "json") {
         res.json(randomImage);
@@ -296,7 +298,7 @@ function listImages(req,res,images1,options,defConfig,maxVal) {
   var images1a, data;
   var maxValue = options["length"] || maxVal || config.pageSize;
   if(maxValue > config.maxPageSize) maxValue = config.maxPageSize;
-  getImagesTagged(config.hiddenTags,function(hiddenImages) {
+  getImagesTagged(config.tags.hidden,function(hiddenImages) {
     if(!_(req.cookies.showHidden).isUndefined() || req.query["hidden"] == true) images1a = images1;
     else images1a = _.difference(images1,hiddenImages);
     imageDB.range(images1a,start,maxValue,function(images2) {
@@ -304,7 +306,7 @@ function listImages(req,res,images1,options,defConfig,maxVal) {
       console.log(options);
       if(options["mobile"] == 'true') conf.mobile = true;
       if(mode=="json") {
-        if(config.allowJson == false) { error(req, res, "JSON not allowed!", 403); return; }
+        if(config.api.json == false) { error(req, res, "JSON not allowed!", 403); return; }
         res.json({position: start, length: images2.length, results: images2});
       } else {
         if(_(options).has("subtitle2"))
@@ -357,27 +359,26 @@ if(config.salt == defaultConfig.salt || config.salt.length < 16) {
 }
 
 console.log("Connecting to database...")
-var client = redis.createClient();
+var client = redis.createClient(config.database.port, config.database.host);
+if(config.database.password != "")
+  client.auth(config.database.password);
 imageDB.connect(client);
 cacheDB.connect(client);
 userDB.connect(client, config.salt);
-imageHandler.setMode(config.optimize);
 
-userDB.exists("admin", function(err, exists) {
-  if(!err && !exists) {
-    console.log("Creating default users...");
-    _.each(config.defaultUsers, function(value,key) {
-      console.log("[+] "+key);
-      userDB.addUser({user: key, pass: userDB.hash(value), nick: key, type: "admin"});
-    });
-  }
-  else if(err) { console.log("Error checking userDB! " + err.message); }
+console.log("(Re)Creating users...");
+_.each(config.users, function(value,key) {
+  console.log("[+] "+key);
+  var user = {user: key, nick: key, type: "admin"};
+  if(_.isString(value)) user.pass = userDB.hash(value);
+  else { user.pass = userDB.hash(value.pass); user.nick = value.nick || user.nick; user.type = value.type || user.type; }
+  userDB.addUser(user, function() {});
 });
 
 function start() {
   imageDB.updateDatabase(function() {
-    app.listen(config.port);
-    console.log("Working on port " + config.port);
+    app.listen(config.server.port);
+    console.log("Working on port " + config.server.port);
   });
 }
 
@@ -421,7 +422,9 @@ if(argv.t || argv.thumb) {
   });
 }
 
-process.on("uncaughtException", function(err) {
-  console.log("Uncaught exception! Please report to author");
-  console.log(err);
-});
+if(!(argv.d || argv.debug)) {
+  process.on("uncaughtException", function(err) {
+    console.log("Uncaught exception! Please report to author");
+    console.log(err);
+  });
+}

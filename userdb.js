@@ -30,7 +30,7 @@ UserDB.addUser = function(data,callback) {
   else if(data.pass == null) callback(new Error("Invalid password!"));
   else this.exists(data.user, function(err, does) {
     if(err) callback(err);
-    else if(does) callback(new Error("User exists!"));
+    //else if(does) callback(new Error("User exists!")); * We overwrite users for now. HACK! TODO!
     else async.series([
       _.bind(client.set,client,"user:"+data.user,JSON.stringify(data)),
       _.bind(client.sadd,client,"users",data.user)

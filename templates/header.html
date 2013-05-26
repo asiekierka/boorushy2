@@ -3,11 +3,11 @@
 <a class="normal" href="/"><h1><% if(_.isString(htmlTitle)) { print(htmlTitle); } else { print(title); } %></h1></a>
 <% if(_.isString(subtitle)){ print('<h4>'+subtitle+'</h4>'); } %>
 <%
-if(showClouds) {
+if(ui.showClouds) {
   print('<a href="/cloud/tag">All tags</a> | <a href="/cloud/author">All authors</a>');
-  if(showRandom) { print(' | '); }
+  if(ui.showRandom) { print(' | '); }
 }
-if(showRandom) {
+if(ui.showRandom) {
   print('<a href="/random"><b>Random</b></a>');
 }
 if(req) {

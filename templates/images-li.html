@@ -1,16 +1,16 @@
 <% _.each(images, function(img) {
   if(img == null) return;
   print('<li class="span4"><a href="/image/'+img.id+'/" class="thumbnail thumbnail-300">');
-  var imgloc = _.some(spoilerTags,function(val) {
+  var imgloc = _.some(tags.spoiler,function(val) {
     if(_(img.tags).contains(val)) return true;
   })?'/static/img/spoiler.png':'/img/thumb/'+img.filename;
   var imgtitle = img.name;
-  if(useLazyLoad) {
+  if(lazyLoading) {
     print('<img class="lazy to-scriptize" src="/static/img/white.png" data-original="'+imgloc+'"');
     print(' title="'+imgtitle+'"><noscript>');
   }
   print('<img src="'+imgloc+'" class="to-scriptize" title="'+imgtitle+'">');
-  if(useLazyLoad) {
+  if(lazyLoading) {
     print('</noscript>');
   }
   print('</a></li>');

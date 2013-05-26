@@ -2,15 +2,15 @@ var _ = require('underscore')
   , fs = require('fs')
   , mkdirp = require('mkdirp')
   , im = require('imagemagick')
-  , config = require('./config.json')
   , child = require('child_process')
   , async = require('async')
   , util = require('./util.js');
 
 var thumbW = 300, thumbH = 300;
 
-var optimizeMode = "all";
-exports.setMode = function(mode) { optimizeMode = mode; }
+var config = {};
+
+exports.setConfig = function(c) { config = c; }
 
 exports.resize = function(src,dest,w,h,cb,grav) {
   var cnf = { srcPath: src, dstPath: dest,
@@ -35,7 +35,7 @@ var optqueue = async.queue(function (task, callback) {
 }, config.optimizationThreads || 1);
 
 exports.optimize = function(path,data) {
-  if(optimizeMode == "none" || !fs.existsSync(path)) return;
+  if(config.optimize == "none" || !fs.existsSync(path)) return;
   var oldfilesize = util.filesize(path);
   var format = (data.format || util.fileExt(path)).toLowerCase();
   if(format=="jpeg") format="jpg";
@@ -56,7 +56,7 @@ exports.handle = function(src,destName,w1,h1,grav,options) {
     if(_.isString(dest2x) && (w>thumbW || h>thumbH))
       self.resize(src,dest2x,thumbW*2,thumbH*2,function(err) {
         if(err) throw err;
-        if(optimizeMode == "all" || optimizeMode == "thumbs" || optimizeMode == "thumbnails") {
+        if(config.optimize == "all" || config.optimize == "thumbnails") {
           self.optimize(dest,{format: util.fileExt(src)});
           self.optimize(dest2x,{format: util.fileExt(src)});
         }
@@ -66,7 +66,7 @@ exports.handle = function(src,destName,w1,h1,grav,options) {
     else if(_.isFunction(options.callback)) options.callback();
   };
   this.resize(src,dest,thumbW,thumbH,t2,grav);
-  if(options.optimizeSrc && optimizeMode == "all" && _(src).startsWith("./img")) self.optimize(src,{format: util.fileExt(src)});
+  if(options.optimizeSrc && config.optimize == "all" && _(src).startsWith("./img")) self.optimize(src,{format: util.fileExt(src)});
 }
 
 // Create missing directories (just in case)

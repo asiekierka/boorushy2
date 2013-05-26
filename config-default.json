@@ -1,34 +1,55 @@
-{ "port": 8080, "pageSize": 15, "maxPageSize": 500, "title": "Booru", "htmlTitle": "Booru",
-  "noAjaxURL": false,
-  "allowJson": true,
-  "useLazyLoad": true,
-  "socialButtons": true,
-  "showClouds": true,
-  "showRandom": true,
-  "salt": "",
-  "defaultUsers": {
-    "admin": "admin"
+{
+  "server": {
+    "port": 8080
   },
-  "optimizationEngines": [
-    {"name": "pngout", "format": "png", "notes": "Likely the best option for PNG",
-     "enabled": false,
-     "path": "/usr/bin/pngout '$FILE'"},
-    {"name": "pngcrush", "format": "png",
-     "enabled": false,
-     "path": "/usr/bin/pngcrush '$FILE' '$FILE'"},
-    {"name": "jpegrescan", "format": "jpg", "notes": "Just install Perl and File::Slurp",
-     "enabled": false,
-     "path": "tools/jpegrescan '$FILE' '$FILE'"},
-    {"name": "gifsicle", "format": "gif",
-     "enabled": false,
-     "path": "/usr/bin/gifsicle --careful '$FILE' -o '$FILE'"}
-  ],
-  "optimizationThreads": 1,
-  "optimize": "all",
-  "spoilerTags": ["spoiler"],
-  "hiddenTags": ["hidden"],
-  "useZepto": false,
-  "style": {
-    "bgcolor": "#fff"
+  "database": {
+    "host": "localhost",
+    "port": 6379,
+    "password": ""
+  },
+  "salt": "",
+  "pageSize": 15,
+  "maxPageSize": 500,
+  "title": "New Booru",
+  "htmlTitle": "New Booru",
+  "users": {
+    "admin": {"pass": "admin", "nick": "admin", "type": "admin" }
+  },
+  "api": {
+    "json": true
+  },
+  "frameworks": {
+    "zeptoJS": "/static/js/zepto.min.js",
+    "jQuery": "/static/js/jquery-1.9.1.min.js"
+  },
+  "framework": "jQuery",
+  "ajaxFetching": true,
+  "lazyLoading": true,
+  "ui": {
+    "socialButtons": true,
+    "showClouds": true,
+    "showRandom": true
+  },
+  "images": {
+    "optimizationEngines": [
+      {"name": "pngout", "format": "png", "notes": "Likely the best option for PNG",
+       "enabled": false,
+       "path": "/usr/bin/pngout '$FILE'"},
+      {"name": "pngcrush", "format": "png",
+       "enabled": false,
+       "path": "/usr/bin/pngcrush '$FILE' '$FILE'"},
+      {"name": "jpegrescan", "format": "jpg", "notes": "Just install Perl and File::Slurp",
+       "enabled": false,
+       "path": "tools/jpegrescan '$FILE' '$FILE'"},
+      {"name": "gifsicle", "format": "gif",
+       "enabled": false,
+       "path": "/usr/bin/gifsicle --careful '$FILE' -o '$FILE'"}
+    ],
+    "optimizationThreads": 1,
+    "optimize": "all"
+  },
+  "tags": {
+    "spoiler": ["spoiler"],
+    "hidden": ["hidden"]
   }
 }
