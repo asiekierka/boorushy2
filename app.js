@@ -56,6 +56,7 @@ if(!_(config).contains("htmlTitle")) {
 
 imageHandler.setConfig(config.images);
 imageHandler.express(express,app);
+template.skin(config.ui.skin);
 
 // Image Adding
 function addImage(rawdata,format,info,callback,thumbnailsrc,grav) {

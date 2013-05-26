@@ -29,7 +29,8 @@
   "ui": {
     "socialButtons": true,
     "showClouds": true,
-    "showRandom": true
+    "showRandom": true,
+    "skin": "default"
   },
   "images": {
     "optimizationEngines": [
