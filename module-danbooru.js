@@ -43,7 +43,7 @@ function toDanbooruFormat(item) {
 	"uploader_id": 1, // TODO: Make a real uploader ID!
 	"uploader_name": item.uploader,
 	"has_large": false,
-	"tag_string_artist": item.author,
+	"tag_string_artist": "author:"+item.author,
 	"tag_string_character": "",
 	"tag_string_copyright": "",
 	"tag_string_general": item.tags.join(" "),
@@ -55,8 +55,12 @@ function toDanbooruFormat(item) {
 
 // Effing Anime boxes on iPad...
 app.get("/data/*", parse, function(req,res) {
+  if(req.params[0] == "sample") { // data/sample
+    req.params[0] = req.params[1].replace("sample-","");
+  }
   if(req.params[0].indexOf(".") > 0) {
     var md5 = req.params[0].split(".")[0];
+    if(md5
     imageDB.getByHash(md5, function(err, image) {
       if(image != null) {
         res.redirect("/img/src/"+image.filename);
