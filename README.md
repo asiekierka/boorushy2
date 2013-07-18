@@ -7,11 +7,12 @@ plague of hundreds of features that current engines have.
 
 * Simple user interface focusing on the content (images) and not the buttons
 * Custom, fast Redis-based database with caching - fast!
-* Asynchronous file/URL upload UI with automatic DeviantART data fill
-* A full-featured tag search engine
+* Asynchronous file/URL upload with background image optimization to ensure the smallest filesizes at no quality loss
+* Simple batch upload UI with automatic DeviantART data fill
+* A full-featured, sophisticated tag search engine
 * Tag and author clouds
 * Built-in social button functionality that respects your freedom
-* Configurable and styleable as much as you want
+* Configureable and styleable as much as you want
 
 ## Installation
 
@@ -21,6 +22,7 @@ plague of hundreds of features that current engines have.
 	* <b>SET A REASONABLY RANDOM SALT</b> - otherwise the server won't start up.
 	* Change the port to 80 (if you want)
 	* Change the admin password.
+	* Review all the settings two or three times. Also, <b>please modify config.json and not config-default.json</b>.
 3. Install all the necessary dependencies:
 
 		$ npm install
