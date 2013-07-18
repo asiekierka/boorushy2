@@ -316,6 +316,7 @@ function getImageTable(req,images1,options,callback,maxVal) {
 }
 
 function listImages(req,res,images2,options,imageAmount,defConfig) {
+  var start = parseInt(options["start"]) || 0;
   var mode = options["mode"] || "";
   var noHeader = false;
   var conf = _.defaults({images: images2, position: start, maxpos: imageAmount, req: req}, defConfig || {"isSearch": false});
