@@ -363,9 +363,10 @@ console.log("Connecting to database...")
 var client = redis.createClient(config.database.port, config.database.host);
 if(config.database.password != "")
   client.auth(config.database.password);
-imageDB.connect(client);
-cacheDB.connect(client);
-userDB.connect(client, config.salt);
+client.debug_mode = true;
+imageDB.connect(client,config);
+cacheDB.connect(client,config);
+userDB.connect(client,config);
 
 console.log("(Re)Creating users...");
 _.each(config.users, function(value,key) {

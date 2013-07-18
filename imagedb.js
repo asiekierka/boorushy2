@@ -6,14 +6,18 @@ var ImageDB = {}
 
 var client = null
   , CURRENT_VERSION = 2
-  , cloudTags = ["tag", "author", "uploader"];
+  , cloudTags = ["tag", "author", "uploader"]
+  , config = null
+  , prefix = "";
 
-ImageDB.connect = function(cli) {
+ImageDB.connect = function(cli,conf) {
   client = cli;
+  config = conf;
+  prefix = conf.database.prefix;
 }
 ImageDB.log = function(t) { console.log("[ImageDB] "+t); }
 ImageDB.getVersion = function(cb) {
-  client.get("db_version",function(err, out) {
+  client.get(prefix+"db_version",function(err, out) {
     if(err) cb(1);
     else cb((parseInt(out)>0) ? parseInt(out) : 1);
   });
@@ -26,7 +30,7 @@ ImageDB.updateDatabase = function(callback) {
       self.log("Updating DB from version 1 to 2");
       self.updateCloud(function(){
         self.log("Done updating!");
-        client.set("db_version", 2, _.bind(self.updateDatabase, self));
+        client.set(prefix+"db_version", 2, _.bind(self.updateDatabase, self));
       });
     }
     else if(version == CURRENT_VERSION) { self.log("Latest DB version, nothing to do..."); if(_.isFunction(callback)) callback(); }
@@ -43,7 +47,7 @@ ImageDB.updateCloud = function(callback) {
   }, callback);
 }
 ImageDB.getCloud = function(name, cb) {
-  client.zrange("cloud:"+name,0,-1,'WITHSCORES',function(err, data) {
+  client.zrange(prefix+"cloud:"+name,0,-1,'WITHSCORES',function(err, data) {
     if(err) throw err;
     var fixedData = {};
     while(data.length > 0) {
@@ -55,10 +59,10 @@ ImageDB.getCloud = function(name, cb) {
 }
 ImageDB.generateCloud = function(name, cb) {
   this.log("(Re)generating tag cloud "+name+"...");
-  client.smembers(name+"s", function(err, out) {
+  client.smembers(prefix+name+"s", function(err, out) {
     if(err) throw err;
     var counts = async.map(out, function(tagName, callback) {
-      client.scard(name+":"+tagName, function(err, out) { // Count
+      client.scard(prefix+name+":"+tagName, function(err, out) { // Count
         callback(err, {"name": tagName, "count": out});
       });
     }, function(err, out) {
@@ -66,35 +70,35 @@ ImageDB.generateCloud = function(name, cb) {
       var output = {};
       async.eachSeries(out, function(tag, callback) {
         if(tag.count == 0 || tag.name == "") callback();
-        else client.zadd("cloud:"+name, tag.count, tag.name, callback);
+        else client.zadd(prefix+"cloud:"+name, tag.count, tag.name, callback);
       }, cb);
     });
   });
 }
 
 ImageDB.get = function(id,callback) {
-  client.get("data:"+id,function(err,out) {
+  client.get(prefix+"data:"+id,function(err,out) {
     if(err) throw err;
     callback(JSON.parse(out));
   });
 }
 ImageDB.getWithError = function(id,callback) {
-  client.get("data:"+id,function(err,out) {
+  client.get(prefix+"data:"+id,function(err,out) {
     callback(err,JSON.parse(out));
   });
 }
 
-ImageDB.exists = function(id,callback) { return client.exists(client,"data:"+id,callback); }
+ImageDB.exists = function(id,callback) { return client.exists(client,prefix+"data:"+id,callback); }
 
 ImageDB.listFields = function(name,callback) {
-  client.smembers(name, function(err,m) {
+  client.smembers(prefix+name, function(err,m) {
     if(err) throw err;
     if(_.isNull(m)) callback(new Array());
     else callback(m.sort());
   });
 }
 ImageDB.listImages = function(name,callback) {
-  client.smembers(name, function(err,m) {
+  client.smembers(prefix+name, function(err,m) {
     if(err) throw err;
     if(_.isNull(m)) callback(new Array());
     else callback(_.sortBy(m,function(num){ return 0-num; }));
@@ -108,7 +112,7 @@ ImageDB.imagesBy = function(key,val,callback){
   this.listImages(key+":"+val,callback);
 }
 ImageDB.imagesByNum = function(key,min,max,callback){
-  client.zrangebyscore("size:"+key,min,max,function(err,m) {
+  client.zrangebyscore(prefix+"size:"+key,min,max,function(err,m) {
     if(err) throw err;
     if(_.isNull(m)) callback(new Array());
     else callback(_.sortBy(m,function(num){ return 0-num; }));
@@ -131,12 +135,12 @@ ImageDB.range = function(arr2,s,l,callback) {
 }
 
 ImageDB.count = function(name,callback) {
-  client.setnx("counter:"+name,0);
-  client.incr("counter:"+name,callback);
+  client.setnx(prefix+"counter:"+name,0);
+  client.incr(prefix+"counter:"+name,callback);
 }
 ImageDB.uncount = function(name,callback) {
-  client.setnx("counter:"+name,0);
-  client.decr("counter:"+name,callback);
+  client.setnx(prefix+"counter:"+name,0);
+  client.decr(prefix+"counter:"+name,callback);
 }
 ImageDB.add = function(data,callback) {
   this.count("imageId",function(count) {
@@ -146,7 +150,7 @@ ImageDB.add = function(data,callback) {
   });
 }
 ImageDB.hashed = function(hash,callback) {
-  client.sismember("hashes",hash,function(err,ishashed) {
+  client.sismember(prefix+"hashes",hash,function(err,ishashed) {
     callback(ishashed);
   });
 }
@@ -154,20 +158,20 @@ ImageDB.hashed = function(hash,callback) {
 
 ImageDB.addField = function(id,key,val,callback) {
   async.parallel([
-    _.bind(client.sadd,client,key+"s",val),
-    _.bind(client.sadd,client,key+":"+val,id),
+    _.bind(client.sadd,client,prefix+key+"s",val),
+    _.bind(client.sadd,client,prefix+key+":"+val,id),
     ], callback);
 }
 ImageDB.delField = function(id,key,val,callback) {
   async.series([
-    _.bind(client.srem,client,key+":"+val,id),
+    _.bind(client.srem,client,prefix+key+":"+val,id),
     function(cb) {
-      client.scard(key+":"+val,function(err,card) {
+      client.scard(prefix+key+":"+val,function(err,card) {
         if(err) throw err;
         if(card==0)
           async.parallel([
-            _.bind(client.del,client,key+":"+val),
-            _.bind(client.srem,client,key+"s",val)
+            _.bind(client.del,client,prefix+key+":"+val),
+            _.bind(client.srem,client,prefix+key+"s",val)
           ],cb);
         else cb();
       });
@@ -176,10 +180,10 @@ ImageDB.delField = function(id,key,val,callback) {
 }
 
 ImageDB.addSize = function(id,key,val,callback) {
-  client.zadd("size:"+key,val,id,callback);
+  client.zadd(prefix+"size:"+key,val,id,callback);
 }
 ImageDB.delSize = function(id,key,callback) {
-  client.zrem("size:"+key,id,callback);
+  client.zrem(prefix+"size:"+key,id,callback);
 }
 
 ImageDB.setTags = function(id,tags,callback) {
@@ -196,7 +200,7 @@ ImageDB.unsetTags = function(id,tags,callback) {
 ImageDB.setSearchData = function(id, data, callback) {
   var self = this;
   async.parallel([
-    _.bind(client.sadd,client,"hashes",data.hash),
+    _.bind(client.sadd,client,prefix+"hashes",data.hash),
     _.bind(self.setTags,self,id,data.tags),
     _.bind(self.addField,self,id,"author",data.author),
     _.bind(self.addField,self,id,"uploader",data.uploader),
@@ -207,7 +211,7 @@ ImageDB.setSearchData = function(id, data, callback) {
 ImageDB.unsetSearchData = function(id, data, callback) {
   var self = this;
   async.series([
-    _.bind(client.srem,client,"hashes",data.hash),
+    _.bind(client.srem,client,prefix+"hashes",data.hash),
     _.bind(self.unsetTags,self,id,data.tags),
     function(cb) { cb(); },
     _.bind(self.delField,self,id,"author",data.author),
@@ -232,11 +236,11 @@ ImageDB.set = function(id,data,callback,noHashCheck) {
   var self = this;
   this.hashed(data.hash,function(ishashed) {
     if(noHashCheck || !ishashed)
-      client.exists("data:"+id,function(err,exists) {
+      client.exists(prefix+"data:"+id,function(err,exists) {
         var s = function() {
           async.parallel([
-            _.bind(client.set,client,"data:"+id,JSON.stringify(data)),
-            _.bind(client.sadd,client,"images",id),
+            _.bind(client.set,client,prefix+"data:"+id,JSON.stringify(data)),
+            _.bind(client.sadd,client,prefix+"images",id),
             _.bind(self.setSearchData,self,id,data),
             _.bind(self.updateCloud,self)
           ], callback);
@@ -253,8 +257,8 @@ ImageDB.unset = function(id,callback,dontTouchData) {
   this.get(id,function(data) {
     if(data == null) callback();
     async.parallel([
-      function(callback) { if(!dontTouchData) client.del("data:"+id,callback); else callback(); },
-      function(callback) { if(!dontTouchData) client.srem("images",id,callback); else callback(); },
+      function(callback) { if(!dontTouchData) client.del(prefix+"data:"+id,callback); else callback(); },
+      function(callback) { if(!dontTouchData) client.srem(prefix+"images",id,callback); else callback(); },
       _.bind(self.unsetSearchData,self,id,data),
       _.bind(self.updateCloud,self)
     ],callback);
