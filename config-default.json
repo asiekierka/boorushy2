@@ -11,12 +11,14 @@
   "salt": "",
   "pageSize": 15,
   "maxPageSize": 500,
+  "maxSearchLength": 500,
   "title": "New Booru",
   "htmlTitle": "New Booru",
   "users": {
     "admin": {"pass": "admin", "nick": "admin", "type": "admin" }
   },
   "api": {
+    "danbooru": true,
     "json": true
   },
   "frameworks": {

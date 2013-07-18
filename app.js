@@ -44,6 +44,7 @@ function error(req,res,text,codeO) {
 }
 
 function parse(req,res,next) { if(req.params[0]) req.params = req.params[0].split("/"); else req.params = [""]; next(); }
+function logConnection(req, res, next) { console.log(req.path); next(); }
 
 // Configure
 var config = fs.existsSync("./config.json") ? require('./config.json') : defaultConfig;
@@ -172,6 +173,14 @@ function handleQuery(entry,images,allImages) {
   return images;
 }
 function handleSearch(req, res, query) {
+  getSearchTable(req, query, function(table) {
+    getImageTable(req,table,req.query,function(images) {
+      var mlen = Math.min(config.maxSearchLength,images.length);
+      listImages(req,res,images,req.query,mlen,{ajaxFetching: false, isSearch: true, subtitle: mlen+" results found."});
+    }, config.maxSearchLength);
+  });
+}
+function getSearchTable(req, query, callback) {
   var stack = [];
   cacheDB.exists("search:"+query,function(err,exists) {
     if(!exists)
@@ -195,13 +204,13 @@ function handleSearch(req, res, query) {
           if(stack.length > 1) { error(req,res,"Something quite bad happened! "+JSON.stringify(stack)); return; }
           var result = stack.pop();
           cacheDB.set("search:"+query,result,60,null);
-          listImages(req,res,result,req.query,{ajaxFetching: false, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
+          callback(result);
         });
       });
     else { // Found cached!
       console.log("Loading from cache!");
       cacheDB.get("search:"+query,function(err,result) {
-        listImages(req,res,result,req.query,{ajaxFetching: false, isSearch: true, subtitle: Math.min(1000,result.length)+" results found."},1000);
+        callback(result);
       });
     }
   });
@@ -292,10 +301,8 @@ app.get("/random*", parse, function(req,res) {
 });
 
 // Image listing
-function listImages(req,res,images1,options,defConfig,maxVal) {
+function getImageTable(req,images1,options,callback,maxVal) {
   var start = parseInt(options["start"]) || 0;
-  var mode = options["mode"] || "";
-  var noHeader = false;
   var images1a, data;
   var maxValue = options["length"] || maxVal || config.pageSize;
   if(maxValue > config.maxPageSize) maxValue = config.maxPageSize;
@@ -303,30 +310,41 @@ function listImages(req,res,images1,options,defConfig,maxVal) {
     if(!_(req.cookies.showHidden).isUndefined() || req.query["hidden"] == true) images1a = images1;
     else images1a = _.difference(images1,hiddenImages);
     imageDB.range(images1a,start,maxValue,function(images2) {
-      var conf = _.defaults({images: images2, position: start, maxpos: images1.length, req: req}, defConfig || {isSearch: false});
-      console.log(options);
-      if(options["mobile"] == 'true') conf.mobile = true;
-      if(mode=="json") {
-        if(config.api.json == false) { error(req, res, "JSON not allowed!", 403); return; }
-        res.json({position: start, length: images2.length, results: images2});
-      } else {
-        if(_(options).has("subtitle2"))
-          conf.subtitle = _.capitalize(options["subtitle1"])+": "+options["subtitle2"];
-        else if(!_.isString(conf.subtitle)) { // Create custom subtitle
-          if(start > 0 && (start % config.pageSize) == 0) { // page 2+
-            conf.subtitle = "Page " + ((start / config.pageSize)+1);
-          } else { // page 1
-            conf.subtitle = "Now with " + conf.maxpos + " images!";        
-          }
-        }
-        var imagesLi = makeRawTemplate("images-li",conf,"raw",true);
-        conf.imagesLi = imagesLi;
-        if(mode == "append") data = conf.imagesLi;
-        else data = makeTemplate("images",conf,mode,noHeader);
-        res.send(data);
-      }
+      callback(images2);
     });
   });
+}
+
+function listImages(req,res,images2,options,imageAmount,defConfig) {
+  var mode = options["mode"] || "";
+  var noHeader = false;
+  var conf = _.defaults({images: images2, position: start, maxpos: imageAmount, req: req}, defConfig || {"isSearch": false});
+  console.log(options);
+  if(options["mobile"] == 'true') conf.mobile = true;
+  if(mode=="json") {
+    if(config.api.json == false) { error(req, res, "JSON not allowed!", 403); return; }
+    res.json({position: start, length: images2.length, results: images2});
+  } else {
+    if(_(options).has("subtitle2"))
+      conf.subtitle = _.capitalize(options["subtitle1"])+": "+options["subtitle2"];
+    else if(!_.isString(conf.subtitle)) { // Create custom subtitle
+      if(start > 0 && (start % config.pageSize) == 0) { // page 2+
+        conf.subtitle = "Page " + ((start / config.pageSize)+1);
+      } else { // page 1
+        conf.subtitle = "Now with " + conf.maxpos + " images!";        
+      }
+    }
+    var imagesLi = makeRawTemplate("images-li",conf,"raw",true);
+    conf.imagesLi = imagesLi;
+    if(mode == "append") data = conf.imagesLi;
+    else data = makeTemplate("images",conf,mode,noHeader);
+    res.send(data);
+  }
+}
+
+// Load Danbooru API emulation
+if(config.api.danbooru) {
+  eval(fs.readFileSync('module-danbooru.js', 'utf-8'));
 }
 
 app.get("/cloud/*", parse, function(req,res) {
@@ -342,9 +360,15 @@ app.get("/*", function(req,res) {
   var p = qs.unescape(req.path).split("/");
   console.log("Request: " + JSON.stringify(p)); 
   if(p.length>0 && (p[1] == "tag" || p[1] == "author" || p[1] == "uploader")) imageDB.imagesBy(p[1],p[2],function(images) {
-    listImages(req,res,images,_(req.query).extend({"subtitle1": p[1], "subtitle2": p[2]}));
+    getImageTable(req,images,req.query,function(images2) {
+      listImages(req,res,images2,_(req.query).extend({"subtitle1": p[1], "subtitle2": p[2]}), images.length);
+    });
   });
-  else imageDB.images(function(images) { listImages(req,res,images,req.query); });
+  else imageDB.images(function(images) {
+    getImageTable(req,images,req.query,function(images2) {
+      listImages(req,res,images2,req.query,images.length);
+    });
+  });
 });
 
 // Personal boost.io code

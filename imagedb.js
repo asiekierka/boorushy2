@@ -33,7 +33,7 @@ ImageDB.updateDatabase = function(callback) {
         client.set(prefix+"db_version", 2, _.bind(self.updateDatabase, self));
       });
     }
-    else if(version == CURRENT_VERSION) { self.log("Latest DB version, nothing to do..."); if(_.isFunction(callback)) callback(); }
+    if(version == CURRENT_VERSION) { self.log("Latest DB version, nothing to do..."); if(_.isFunction(callback)) callback(false); return; }
   });
 }
 
@@ -204,6 +204,7 @@ ImageDB.setSearchData = function(id, data, callback) {
     _.bind(self.setTags,self,id,data.tags),
     _.bind(self.addField,self,id,"author",data.author),
     _.bind(self.addField,self,id,"uploader",data.uploader),
+    _.bind(client.hset,client,"hashToImage",data.hash,data.id),
     _.bind(self.addSize,self,id,"width",data.width),
     _.bind(self.addSize,self,id,"height",data.height)
   ], callback);
@@ -216,9 +217,17 @@ ImageDB.unsetSearchData = function(id, data, callback) {
     function(cb) { cb(); },
     _.bind(self.delField,self,id,"author",data.author),
     _.bind(self.delField,self,id,"uploader",data.uploader),
+    _.bind(client.hdel,client,"hashToImage",data.hash),
     _.bind(self.delSize,self,id,"width"),
     _.bind(self.delSize,self,id,"height")
   ], callback);
+}
+ImageDB.getByHash = function(hash, callback) {
+  var self = this;
+  client.hget("hashToImage", hash, function(err, results){
+    if(err) callback(err, null);
+    else self.getWithError(results, callback); 
+  });
 }
 
 ImageDB.regenerate = function(id, callback) {
