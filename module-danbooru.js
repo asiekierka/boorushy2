@@ -60,7 +60,6 @@ app.get("/data/*", parse, function(req,res) {
   }
   if(req.params[0].indexOf(".") > 0) {
     var md5 = req.params[0].split(".")[0];
-    if(md5
     imageDB.getByHash(md5, function(err, image) {
       if(image != null) {
         res.redirect("/img/src/"+image.filename);
