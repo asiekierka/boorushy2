@@ -10,7 +10,7 @@ plague of hundreds of features that current engines have.
 * Asynchronous file/URL upload UI with automatic DeviantART data fill
 * A full-featured tag search engine
 * Tag and author clouds
-* Built-in social button functionality
+* Built-in social button functionality that respects your freedom
 * Configurable and styleable as much as you want
 
 ## Installation
