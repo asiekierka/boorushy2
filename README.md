@@ -12,7 +12,7 @@ plague of hundreds of features that current engines have.
 * A full-featured, sophisticated tag search engine
 * Tag and author clouds
 * Built-in social button functionality that respects your freedom
-* Configureable and styleable as much as you want
+* Configurable and styleable as much as you want
 
 ## Installation
 
